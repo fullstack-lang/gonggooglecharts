@@ -24,6 +24,16 @@
 			"group": "build"
 		},
 		{
+			"label": "01 - gongc",
+			"type": "shell",
+			"options": {
+				"cwd": "go/models"
+			},
+			"command": "gongc",
+			"args": [],
+			"group": "build"
+		},
+		{
 			"label": "01 - gongc & run",
 			"type": "shell",
 			"options": {

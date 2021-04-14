@@ -6,6 +6,10 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { GonggooglechartsModule } from 'gonggooglecharts'
 
+import { GonggooglechartspecificModule } from 'gonggooglechartspecific'
+
+import { AngularSplitModule } from 'angular-split';
+
 // mandatory
 import { HttpClientModule } from '@angular/common/http';
 
@@ -16,9 +20,12 @@ import { HttpClientModule } from '@angular/common/http';
   imports: [
     BrowserModule,
     BrowserAnimationsModule,
+    AngularSplitModule,
 
     HttpClientModule,
-    GonggooglechartsModule
+    GonggooglechartsModule,
+    GonggooglechartspecificModule
+
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 
+import { GonggooglechartspecificComponent } from 'gonggooglechartspecific'
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -7,4 +9,10 @@ import { Component } from '@angular/core';
 })
 export class AppComponent {
   title = 'ng';
+
+  view = 'Carto view' // the curent view
+  carto = 'Carto view'
+  data = 'Data view'
+  diagrams = 'Diagrams view'
+  views: string[] = [this.carto, this.data];
 }

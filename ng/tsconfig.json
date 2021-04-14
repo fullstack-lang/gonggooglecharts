@@ -9,8 +9,9 @@
     "paths": {
       "gonggooglecharts": [
         "projects/gonggooglecharts/src/public-api.ts",
-        "dist/gonggooglecharts/gonggooglecharts",
-        "dist/gonggooglecharts"
+      ],
+      "gonggooglechartspecific": [
+        "projects/gonggooglechartspecific/src/public-api.ts",
       ]
     },
     "downlevelIteration": true,
