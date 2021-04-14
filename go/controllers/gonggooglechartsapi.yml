@@ -1,0 +1,571 @@
+basePath: /api/github.com/fullstack-lang/gonggooglecharts/go/v1
+consumes:
+- application/json
+definitions:
+  Duration:
+    description: |-
+      A Duration represents the elapsed time between two instants
+      as an int64 nanosecond count. The representation limits the
+      largest representable duration to approximately 290 years.
+    format: int64
+    type: integer
+    x-go-package: time
+  NullFloat64:
+    description: |-
+      NullFloat64 implements the Scanner interface so
+      it can be used as a scan destination, similar to NullString.
+    properties:
+      Float64:
+        format: double
+        type: number
+      Valid:
+        type: boolean
+    title: NullFloat64 represents a float64 that may be null.
+    type: object
+    x-go-package: database/sql
+  NullInt64:
+    description: |-
+      NullInt64 implements the Scanner interface so
+      it can be used as a scan destination, similar to NullString.
+    properties:
+      Int64:
+        format: int64
+        type: integer
+      Valid:
+        type: boolean
+    title: NullInt64 represents an int64 that may be null.
+    type: object
+    x-go-package: database/sql
+  NullString:
+    description: |-
+      var s NullString
+      err := db.QueryRow("SELECT name FROM foo WHERE id=?", id).Scan(&s)
+      ...
+      if s.Valid {
+      use s.String
+      } else {
+      NULL value
+      }
+    properties:
+      String:
+        type: string
+      Valid:
+        type: boolean
+    title: |-
+      NullString represents a string that may be null.
+      NullString implements the Scanner interface so
+      it can be used as a scan destination:
+    type: object
+    x-go-package: database/sql
+  NullTime:
+    description: |-
+      NullTime implements the Scanner interface so
+      it can be used as a scan destination, similar to NullString.
+    properties:
+      Time:
+        format: date-time
+        type: string
+      Valid:
+        type: boolean
+    title: NullTime represents a time.Time that may be null.
+    type: object
+    x-go-package: database/sql
+  Ressource:
+    properties:
+      Name:
+        type: string
+    type: object
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/models
+  Task:
+    properties:
+      Dependencies:
+        items:
+          $ref: '#/definitions/Task'
+        type: array
+      DisplayedName:
+        type: string
+      Duration:
+        $ref: '#/definitions/Duration'
+      End:
+        format: date-time
+        type: string
+      Name:
+        type: string
+      PercentComplete:
+        format: double
+        type: number
+      Ressource:
+        $ref: '#/definitions/Ressource'
+      Start:
+        format: date-time
+        type: string
+    type: object
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/models
+  ressourceAPI:
+    description: |-
+      for POST, API, one needs the fields of the model as well as the fields
+      from associations ("Has One" and "Has Many") that are generated to
+      fullfill the ORM requirements for associations
+    properties:
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+    title: RessourceAPI is the input in POST API
+    type: object
+    x-go-name: RessourceAPI
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  ressourceDB:
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
+    properties:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      UpdatedAt:
+        format: date-time
+        type: string
+    title: RessourceDB describes a ressource in the database
+    type: object
+    x-go-name: RessourceDB
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  taskAPI:
+    description: |-
+      for POST, API, one needs the fields of the model as well as the fields
+      from associations ("Has One" and "Has Many") that are generated to
+      fullfill the ORM requirements for associations
+    properties:
+      Dependencies:
+        items:
+          $ref: '#/definitions/Task'
+        type: array
+      DisplayedName:
+        type: string
+      DisplayedName_Data:
+        $ref: '#/definitions/NullString'
+      Duration:
+        $ref: '#/definitions/Duration'
+      Duration_Data:
+        $ref: '#/definitions/NullInt64'
+      End:
+        format: date-time
+        type: string
+      End_Data:
+        $ref: '#/definitions/NullTime'
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      PercentComplete:
+        format: double
+        type: number
+      PercentComplete_Data:
+        $ref: '#/definitions/NullFloat64'
+      Ressource:
+        $ref: '#/definitions/Ressource'
+      RessourceID:
+        $ref: '#/definitions/NullInt64'
+      RessourceName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+      Start:
+        format: date-time
+        type: string
+      Start_Data:
+        $ref: '#/definitions/NullTime'
+      Task_DependenciesDBID:
+        $ref: '#/definitions/NullInt64'
+    title: TaskAPI is the input in POST API
+    type: object
+    x-go-name: TaskAPI
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  taskDB:
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
+    properties:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      Dependencies:
+        items:
+          $ref: '#/definitions/Task'
+        type: array
+      DisplayedName:
+        type: string
+      DisplayedName_Data:
+        $ref: '#/definitions/NullString'
+      Duration:
+        $ref: '#/definitions/Duration'
+      Duration_Data:
+        $ref: '#/definitions/NullInt64'
+      End:
+        format: date-time
+        type: string
+      End_Data:
+        $ref: '#/definitions/NullTime'
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      PercentComplete:
+        format: double
+        type: number
+      PercentComplete_Data:
+        $ref: '#/definitions/NullFloat64'
+      Ressource:
+        $ref: '#/definitions/Ressource'
+      RessourceID:
+        $ref: '#/definitions/NullInt64'
+      RessourceName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+      Start:
+        format: date-time
+        type: string
+      Start_Data:
+        $ref: '#/definitions/NullTime'
+      Task_DependenciesDBID:
+        $ref: '#/definitions/NullInt64'
+      UpdatedAt:
+        format: date-time
+        type: string
+    title: TaskDB describes a task in the database
+    type: object
+    x-go-name: TaskDB
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+host: localhost:8080
+info:
+  description: gonggooglecharts exposes types of a package.
+  title: gonggooglecharts backend API
+  version: "0.1"
+paths:
+  /commitnb:
+    get:
+      operationId: GetLastCommitNb
+      tags:
+      - backrepo
+  /ressources:
+    get:
+      description: Get all ressources
+      operationId: getRessources
+      responses:
+        "200":
+          $ref: '#/responses/ressourceDBsResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ressources
+    post:
+      consumes:
+      - application/json
+      description: Creates a ressource
+      operationId: postRessource
+      parameters:
+      - description: The Ressource to submit or modify
+        in: body
+        name: Ressource
+        schema:
+          $ref: '#/definitions/ressourceAPI'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/ressourceDBResponse'
+      tags:
+      - ressources
+  /ressources/{ID}:
+    delete:
+      description: Delete a ressource
+      operationId: deleteRessource
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ressources
+    get:
+      operationId: getRessource
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        "200":
+          $ref: '#/responses/ressourceDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      summary: Gets the details for a ressource.
+      tags:
+      - ressources
+    patch:
+      description: Update a ressource
+      operationId: updateRessource
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      - description: The Ressource to submit or modify
+        in: body
+        name: Ressource
+        schema:
+          $ref: '#/definitions/ressourceAPI'
+      responses:
+        "200":
+          $ref: '#/responses/ressourceDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ressources
+  /tasks:
+    get:
+      description: Get all tasks
+      operationId: getTasks
+      responses:
+        "200":
+          $ref: '#/responses/taskDBsResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Creates a task
+      operationId: postTask
+      parameters:
+      - description: The Task to submit or modify
+        in: body
+        name: Task
+        schema:
+          $ref: '#/definitions/taskAPI'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/taskDBResponse'
+      tags:
+      - tasks
+  /tasks/{ID}:
+    delete:
+      description: Delete a task
+      operationId: deleteTask
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - tasks
+    get:
+      operationId: getTask
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        "200":
+          $ref: '#/responses/taskDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      summary: Gets the details for a task.
+      tags:
+      - tasks
+    patch:
+      description: Update a task
+      operationId: updateTask
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      - description: The Task to submit or modify
+        in: body
+        name: Task
+        schema:
+          $ref: '#/definitions/taskAPI'
+      responses:
+        "200":
+          $ref: '#/responses/taskDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - tasks
+produces:
+- application/json
+responses:
+  genericError:
+    description: |-
+      A GenericError is the default error message that is generated.
+      For certain status codes there are more appropriate error structures.
+    schema:
+      properties:
+        code:
+          format: int32
+          type: integer
+          x-go-name: Code
+        message:
+          type: string
+          x-go-name: Message
+      type: object
+  ressourceDBResponse:
+    description: RessourceDBResponse provides response
+    headers:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        description: |-
+          insertion for fields declaration
+          Declation for basic field ressourceDB.Name {{BasicKind}} (to be completed)
+      UpdatedAt:
+        format: date-time
+        type: string
+    schema:
+      $ref: '#/definitions/NullString'
+  ressourceDBsResponse:
+    description: RessourceDBs arrays ressourceDBs
+    schema:
+      items:
+        $ref: '#/definitions/ressourceDB'
+      type: array
+  taskDBResponse:
+    description: TaskDBResponse provides response
+    headers:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      Dependencies:
+        items:
+          $ref: '#/definitions/Task'
+        type: array
+      DisplayedName:
+        type: string
+      DisplayedName_Data:
+        description: Declation for basic field taskDB.DisplayedName {{BasicKind}}
+          (to be completed)
+      Duration: {}
+      Duration_Data:
+        description: Declation for basic field taskDB.Duration {{BasicKind}} (to be
+          completed)
+      End:
+        format: date-time
+        type: string
+      End_Data:
+        description: Declation for basic field taskDB.End
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        description: |-
+          insertion for fields declaration
+          Declation for basic field taskDB.Name {{BasicKind}} (to be completed)
+      PercentComplete:
+        format: double
+        type: number
+      PercentComplete_Data:
+        description: Declation for basic field taskDB.PercentComplete {{BasicKind}}
+          (to be completed)
+      Ressource: {}
+      RessourceID:
+        description: |-
+          field Ressource is a pointer to another Struct (optional or 0..1)
+          This field is generated into another field to enable AS ONE association
+      RessourceName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+      Start:
+        format: date-time
+        type: string
+      Start_Data:
+        description: Declation for basic field taskDB.Start
+      Task_DependenciesDBID:
+        description: Implementation of a reverse ID for field Task{}.Dependencies
+          []*Task
+      UpdatedAt:
+        format: date-time
+        type: string
+    schema:
+      $ref: '#/definitions/NullInt64'
+  taskDBsResponse:
+    description: TaskDBs arrays taskDBs
+    schema:
+      items:
+        $ref: '#/definitions/taskDB'
+      type: array
+  validationError:
+    description: |-
+      A ValidationError is an that is generated for validation failures.
+      It has the same fields as a generic error but adds a Field property.
+    schema:
+      properties:
+        code:
+          format: int32
+          type: integer
+          x-go-name: Code
+        field:
+          type: string
+          x-go-name: Field
+        message:
+          type: string
+          x-go-name: Message
+      type: object
+schemes:
+- http
+securityDefinitions:
+  basic:
+    type: basic
+swagger: "2.0"
