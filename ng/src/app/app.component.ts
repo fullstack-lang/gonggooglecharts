@@ -9,10 +9,4 @@ import { GonggooglechartspecificComponent } from 'gonggooglechartspecific'
 })
 export class AppComponent {
   title = 'ng';
-
-  view = 'Carto view' // the curent view
-  carto = 'Carto view'
-  data = 'Data view'
-  diagrams = 'Diagrams view'
-  views: string[] = [this.carto, this.data];
 }

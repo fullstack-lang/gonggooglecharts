@@ -1,0 +1,1 @@
+:host > *:not(h1) { display: inline-block !important; }

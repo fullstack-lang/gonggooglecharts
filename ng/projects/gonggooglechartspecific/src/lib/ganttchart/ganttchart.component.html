@@ -1,1 +1,12 @@
-<p>ganttchart works!</p>
+<p>ganttchart works! dsdqdsds</p>
+<h1 style="font-family: Arial, Helvetica, sans-serif">Angular Google-Charts Demo</h1>
+<div *ngFor="let toto of totos">
+    <p>{{toto.title}}</p>
+</div>
+<div *ngFor="let chart of charts">
+    <h2>{{chart.title}}</h2>
+    <google-chart width="600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
+        [options]="chart.options" (ready)="onReady()" (select)="onSelect($event)" (error)="onError($event)"
+        (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave($event)">
+    </google-chart>
+</div>
