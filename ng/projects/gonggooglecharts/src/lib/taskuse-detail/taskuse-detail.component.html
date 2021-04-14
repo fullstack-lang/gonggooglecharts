@@ -1,0 +1,49 @@
+<div *ngIf="taskuse" class="details">
+    <h1 class="details__title">taskuse</h1>
+    <!-- insertion point for fields specific code -->
+    <!-- -->
+    <div class="details__item">
+        <form>
+            <mat-form-field>
+                <mat-label>Name</mat-label>
+                <input name="" [ngModelOptions]="{standalone: true}" matInput [(ngModel)]="taskuse.Name">
+            </mat-form-field>
+        </form>
+    </div>
+    <div class="details__item">
+        <mat-form-field>
+            <mat-label>Task</mat-label>
+            <mat-select [(ngModel)]="taskuse.Task">
+                <mat-option>None</mat-option>
+                <mat-option *ngFor="let task of frontRepo.Tasks_array" [value]="task">
+                    {{task.Name}}
+                </mat-option>
+            </mat-select>
+        </mat-form-field>
+    </div>
+    <!-- -->
+    <div class="details__item">
+        <form>
+            <mat-form-field>
+                <mat-label>RankInGanttDiagram</mat-label>
+                <input type="number" [ngModelOptions]="{standalone: true}" matInput [(ngModel)]="taskuse.RankInGanttDiagram">
+            </mat-form-field>
+        </form>
+    </div>
+    <div class="details__item">
+    <mat-form-field>
+        <mat-label><- Tasks</mat-label>
+        <mat-select [(ngModel)]="taskuse.GanttChart_Tasks_reverse">
+            <mat-option>None</mat-option>
+            <mat-option *ngFor="let ganttchart of frontRepo.GanttCharts_array" [value]="ganttchart">
+                {{ganttchart.Name}}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
+</div>
+    <div class="details__save">
+        <button mat-raised-button color="primary" (click)="save()">
+			Save taskuse
+		</button>
+    </div>
+</div>

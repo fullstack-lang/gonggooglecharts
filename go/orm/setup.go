@@ -32,8 +32,10 @@ func SetupModels(logMode bool, filepath string) *gorm.DB {
 // AutoMigrate migrates db with with orm Struct
 func AutoMigrate(db *gorm.DB) {
 	_db := db.AutoMigrate( // insertion point for reference to structs 
+	  &GanttChartDB{},
 	  &RessourceDB{},
 	  &TaskDB{},
+	  &TaskUseDB{},
 	)
 
 	if _db.Error != nil {
@@ -44,6 +46,8 @@ func AutoMigrate(db *gorm.DB) {
 }
 
 func ResetDB(db *gorm.DB) { // insertion point for reference to structs 
+	  db.Delete(&GanttChartDB{})
 	  db.Delete(&RessourceDB{})
 	  db.Delete(&TaskDB{})
+	  db.Delete(&TaskUseDB{})
 }

@@ -101,6 +101,66 @@ definitions:
         type: string
     type: object
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/models
+  TaskUse:
+    description: |-
+      TaskUse is a Task used in a given Gantt Diagramm
+      A TaskUse can be used by at most one Diagram
+    properties:
+      Name:
+        type: string
+      RankInGanttDiagram:
+        format: int64
+        type: integer
+      Task:
+        $ref: '#/definitions/Task'
+    type: object
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/models
+  ganttchartAPI:
+    description: |-
+      for POST, API, one needs the fields of the model as well as the fields
+      from associations ("Has One" and "Has Many") that are generated to
+      fullfill the ORM requirements for associations
+    properties:
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      Tasks:
+        items:
+          $ref: '#/definitions/TaskUse'
+        type: array
+    title: GanttChartAPI is the input in POST API
+    type: object
+    x-go-name: GanttChartAPI
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  ganttchartDB:
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
+    properties:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      Tasks:
+        items:
+          $ref: '#/definitions/TaskUse'
+        type: array
+      UpdatedAt:
+        format: date-time
+        type: string
+    title: GanttChartDB describes a ganttchart in the database
+    type: object
+    x-go-name: GanttChartDB
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   ressourceAPI:
     description: |-
       for POST, API, one needs the fields of the model as well as the fields
@@ -251,6 +311,74 @@ definitions:
     type: object
     x-go-name: TaskDB
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  taskuseAPI:
+    description: |-
+      for POST, API, one needs the fields of the model as well as the fields
+      from associations ("Has One" and "Has Many") that are generated to
+      fullfill the ORM requirements for associations
+    properties:
+      GanttChart_TasksDBID:
+        $ref: '#/definitions/NullInt64'
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      RankInGanttDiagram:
+        format: int64
+        type: integer
+      RankInGanttDiagram_Data:
+        $ref: '#/definitions/NullInt64'
+      Task:
+        $ref: '#/definitions/Task'
+      TaskID:
+        $ref: '#/definitions/NullInt64'
+      TaskName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+    title: TaskUseAPI is the input in POST API
+    type: object
+    x-go-name: TaskUseAPI
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
+  taskuseDB:
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
+    properties:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      GanttChart_TasksDBID:
+        $ref: '#/definitions/NullInt64'
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        $ref: '#/definitions/NullString'
+      RankInGanttDiagram:
+        format: int64
+        type: integer
+      RankInGanttDiagram_Data:
+        $ref: '#/definitions/NullInt64'
+      Task:
+        $ref: '#/definitions/Task'
+      TaskID:
+        $ref: '#/definitions/NullInt64'
+      TaskName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+      UpdatedAt:
+        format: date-time
+        type: string
+    title: TaskUseDB describes a taskuse in the database
+    type: object
+    x-go-name: TaskUseDB
+    x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
 host: localhost:8080
 info:
   description: gonggooglecharts exposes types of a package.
@@ -262,6 +390,90 @@ paths:
       operationId: GetLastCommitNb
       tags:
       - backrepo
+  /ganttcharts:
+    get:
+      description: Get all ganttcharts
+      operationId: getGanttCharts
+      responses:
+        "200":
+          $ref: '#/responses/ganttchartDBsResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ganttcharts
+    post:
+      consumes:
+      - application/json
+      description: Creates a ganttchart
+      operationId: postGanttChart
+      parameters:
+      - description: The GanttChart to submit or modify
+        in: body
+        name: GanttChart
+        schema:
+          $ref: '#/definitions/ganttchartAPI'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/ganttchartDBResponse'
+      tags:
+      - ganttcharts
+  /ganttcharts/{ID}:
+    delete:
+      description: Delete a ganttchart
+      operationId: deleteGanttChart
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ganttcharts
+    get:
+      operationId: getGanttChart
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        "200":
+          $ref: '#/responses/ganttchartDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      summary: Gets the details for a ganttchart.
+      tags:
+      - ganttcharts
+    patch:
+      description: Update a ganttchart
+      operationId: updateGanttChart
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      - description: The GanttChart to submit or modify
+        in: body
+        name: GanttChart
+        schema:
+          $ref: '#/definitions/ganttchartAPI'
+      responses:
+        "200":
+          $ref: '#/responses/ganttchartDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - ganttcharts
   /ressources:
     get:
       description: Get all ressources
@@ -430,9 +642,126 @@ paths:
           $ref: '#/responses/genericError'
       tags:
       - tasks
+  /taskuses:
+    get:
+      description: Get all taskuses
+      operationId: getTaskUses
+      responses:
+        "200":
+          $ref: '#/responses/taskuseDBsResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - taskuses
+    post:
+      consumes:
+      - application/json
+      description: Creates a taskuse
+      operationId: postTaskUse
+      parameters:
+      - description: The TaskUse to submit or modify
+        in: body
+        name: TaskUse
+        schema:
+          $ref: '#/definitions/taskuseAPI'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/taskuseDBResponse'
+      tags:
+      - taskuses
+  /taskuses/{ID}:
+    delete:
+      description: Delete a taskuse
+      operationId: deleteTaskUse
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - taskuses
+    get:
+      operationId: getTaskUse
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      responses:
+        "200":
+          $ref: '#/responses/taskuseDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      summary: Gets the details for a taskuse.
+      tags:
+      - taskuses
+    patch:
+      description: Update a taskuse
+      operationId: updateTaskUse
+      parameters:
+      - description: The ID of the order
+        format: int64
+        in: path
+        name: ID
+        required: true
+        type: integer
+      - description: The TaskUse to submit or modify
+        in: body
+        name: TaskUse
+        schema:
+          $ref: '#/definitions/taskuseAPI'
+      responses:
+        "200":
+          $ref: '#/responses/taskuseDBResponse'
+        default:
+          $ref: '#/responses/genericError'
+      tags:
+      - taskuses
 produces:
 - application/json
 responses:
+  ganttchartDBResponse:
+    description: GanttChartDBResponse provides response
+    headers:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        description: |-
+          insertion for fields declaration
+          Declation for basic field ganttchartDB.Name {{BasicKind}} (to be completed)
+      Tasks:
+        items:
+          $ref: '#/definitions/TaskUse'
+        type: array
+      UpdatedAt:
+        format: date-time
+        type: string
+    schema:
+      $ref: '#/definitions/NullString'
+  ganttchartDBsResponse:
+    description: GanttChartDBs arrays ganttchartDBs
+    schema:
+      items:
+        $ref: '#/definitions/ganttchartDB'
+      type: array
   genericError:
     description: |-
       A GenericError is the default error message that is generated.
@@ -545,6 +874,52 @@ responses:
     schema:
       items:
         $ref: '#/definitions/taskDB'
+      type: array
+  taskuseDBResponse:
+    description: TaskUseDBResponse provides response
+    headers:
+      CreatedAt:
+        format: date-time
+        type: string
+      DeletedAt:
+        format: date-time
+        type: string
+      GanttChart_TasksDBID:
+        description: Implementation of a reverse ID for field GanttChart{}.Tasks []*TaskUse
+      ID:
+        format: uint64
+        type: integer
+      Name:
+        type: string
+      Name_Data:
+        description: |-
+          insertion for fields declaration
+          Declation for basic field taskuseDB.Name {{BasicKind}} (to be completed)
+      RankInGanttDiagram:
+        format: int64
+        type: integer
+      RankInGanttDiagram_Data:
+        description: Declation for basic field taskuseDB.RankInGanttDiagram {{BasicKind}}
+          (to be completed)
+      Task: {}
+      TaskID:
+        description: |-
+          field Task is a pointer to another Struct (optional or 0..1)
+          This field is generated into another field to enable AS ONE association
+      TaskName:
+        description: all gong Struct has a Name field, this enables this data to object
+          field
+        type: string
+      UpdatedAt:
+        format: date-time
+        type: string
+    schema:
+      $ref: '#/definitions/NullInt64'
+  taskuseDBsResponse:
+    description: TaskUseDBs arrays taskuseDBs
+    schema:
+      items:
+        $ref: '#/definitions/taskuseDB'
       type: array
   validationError:
     description: |-

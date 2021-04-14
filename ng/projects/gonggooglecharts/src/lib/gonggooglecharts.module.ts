@@ -29,6 +29,10 @@ import { SplitterComponent } from './splitter/splitter.component'
 import { SidebarComponent } from './sidebar/sidebar.component';
 
 // insertion point for imports 
+import { GanttChartsTableComponent } from './ganttcharts-table/ganttcharts-table.component'
+import { GanttChartDetailComponent } from './ganttchart-detail/ganttchart-detail.component'
+import { GanttChartPresentationComponent } from './ganttchart-presentation/ganttchart-presentation.component'
+
 import { RessourcesTableComponent } from './ressources-table/ressources-table.component'
 import { RessourceDetailComponent } from './ressource-detail/ressource-detail.component'
 import { RessourcePresentationComponent } from './ressource-presentation/ressource-presentation.component'
@@ -37,10 +41,18 @@ import { TasksTableComponent } from './tasks-table/tasks-table.component'
 import { TaskDetailComponent } from './task-detail/task-detail.component'
 import { TaskPresentationComponent } from './task-presentation/task-presentation.component'
 
+import { TaskUsesTableComponent } from './taskuses-table/taskuses-table.component'
+import { TaskUseDetailComponent } from './taskuse-detail/taskuse-detail.component'
+import { TaskUsePresentationComponent } from './taskuse-presentation/taskuse-presentation.component'
+
 
 @NgModule({
 	declarations: [
 		// insertion point for declarations 
+		GanttChartsTableComponent,
+		GanttChartDetailComponent,
+		GanttChartPresentationComponent,
+
 		RessourcesTableComponent,
 		RessourceDetailComponent,
 		RessourcePresentationComponent,
@@ -48,6 +60,10 @@ import { TaskPresentationComponent } from './task-presentation/task-presentation
 		TasksTableComponent,
 		TaskDetailComponent,
 		TaskPresentationComponent,
+
+		TaskUsesTableComponent,
+		TaskUseDetailComponent,
+		TaskUsePresentationComponent,
 
 
 		SplitterComponent,
@@ -81,6 +97,10 @@ import { TaskPresentationComponent } from './task-presentation/task-presentation
 	],
 	exports: [
 		// insertion point for declarations 
+		GanttChartsTableComponent,
+		GanttChartDetailComponent,
+		GanttChartPresentationComponent,
+
 		RessourcesTableComponent,
 		RessourceDetailComponent,
 		RessourcePresentationComponent,
@@ -88,6 +108,10 @@ import { TaskPresentationComponent } from './task-presentation/task-presentation
 		TasksTableComponent,
 		TaskDetailComponent,
 		TaskPresentationComponent,
+
+		TaskUsesTableComponent,
+		TaskUseDetailComponent,
+		TaskUsePresentationComponent,
 
 
 		SplitterComponent,

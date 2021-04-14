@@ -8,10 +8,14 @@ import { FrontRepoService, FrontRepo } from '../front-repo.service'
 import { CommitNbService } from '../commitnb.service'
 
 // insertion point for per struct import code
+import { GanttChartService } from '../ganttchart.service'
+import { getGanttChartUniqueID } from '../front-repo.service'
 import { RessourceService } from '../ressource.service'
 import { getRessourceUniqueID } from '../front-repo.service'
 import { TaskService } from '../task.service'
 import { getTaskUniqueID } from '../front-repo.service'
+import { TaskUseService } from '../taskuse.service'
+import { getTaskUseUniqueID } from '../front-repo.service'
 
 /**
  * Types of a GongNode / GongFlatNode
@@ -144,14 +148,24 @@ export class SidebarComponent implements OnInit {
     private commitNbService: CommitNbService,
 
     // insertion point for per struct service declaration
+    private ganttchartService: GanttChartService,
     private ressourceService: RessourceService,
     private taskService: TaskService,
+    private taskuseService: TaskUseService,
   ) { }
 
   ngOnInit(): void {
     this.refresh()
 
     // insertion point for per struct observable for refresh trigger
+    // observable for changes in structs
+    this.ganttchartService.GanttChartServiceChanged.subscribe(
+      message => {
+        if (message == "post" || message == "update" || message == "delete") {
+          this.refresh()
+        }
+      }
+    )
     // observable for changes in structs
     this.ressourceService.RessourceServiceChanged.subscribe(
       message => {
@@ -162,6 +176,14 @@ export class SidebarComponent implements OnInit {
     )
     // observable for changes in structs
     this.taskService.TaskServiceChanged.subscribe(
+      message => {
+        if (message == "post" || message == "update" || message == "delete") {
+          this.refresh()
+        }
+      }
+    )
+    // observable for changes in structs
+    this.taskuseService.TaskUseServiceChanged.subscribe(
       message => {
         if (message == "post" || message == "update" || message == "delete") {
           this.refresh()
@@ -193,6 +215,68 @@ export class SidebarComponent implements OnInit {
       this.gongNodeTree = new Array<GongNode>();
 
       // insertion point for per struct tree construction
+      /**
+      * fill up the GanttChart part of the mat tree
+      */
+      let ganttchartGongNodeStruct: GongNode = {
+        name: "GanttChart",
+        type: GongNodeType.STRUCT,
+        id: 0,
+        uniqueIdPerStack: 13 * nonInstanceNodeId,
+        structName: "GanttChart",
+        associatedStructName: "",
+        children: new Array<GongNode>()
+      }
+      nonInstanceNodeId = nonInstanceNodeId + 1
+      this.gongNodeTree.push(ganttchartGongNodeStruct)
+
+      this.frontRepo.GanttCharts_array.forEach(
+        ganttchartDB => {
+          let ganttchartGongNodeInstance: GongNode = {
+            name: ganttchartDB.Name,
+            type: GongNodeType.INSTANCE,
+            id: ganttchartDB.ID,
+            uniqueIdPerStack: getGanttChartUniqueID(ganttchartDB.ID),
+            structName: "GanttChart",
+            associatedStructName: "",
+            children: new Array<GongNode>()
+          }
+          ganttchartGongNodeStruct.children.push(ganttchartGongNodeInstance)
+
+          // insertion point for per field code
+          /**
+          * let append a node for the slide of pointer Tasks
+          */
+          let TasksGongNodeAssociation: GongNode = {
+            name: "(TaskUse) Tasks",
+            type: GongNodeType.ONE__ZERO_MANY_ASSOCIATION,
+            id: ganttchartDB.ID,
+            uniqueIdPerStack: 19 * nonInstanceNodeId,
+            structName: "GanttChart",
+            associatedStructName: "TaskUse",
+            children: new Array<GongNode>()
+          }
+          nonInstanceNodeId = nonInstanceNodeId + 1
+          ganttchartGongNodeInstance.children.push(TasksGongNodeAssociation)
+
+          ganttchartDB.Tasks?.forEach(taskuseDB => {
+            let taskuseNode: GongNode = {
+              name: taskuseDB.Name,
+              type: GongNodeType.INSTANCE,
+              id: taskuseDB.ID,
+              uniqueIdPerStack: // godel numbering (thank you kurt)
+                7 * getGanttChartUniqueID(ganttchartDB.ID)
+                + 11 * getTaskUseUniqueID(taskuseDB.ID),
+              structName: "TaskUse",
+              associatedStructName: "",
+              children: new Array<GongNode>()
+            }
+            TasksGongNodeAssociation.children.push(taskuseNode)
+          })
+
+        }
+      )
+
       /**
       * fill up the Ressource part of the mat tree
       */
@@ -316,6 +400,71 @@ export class SidebarComponent implements OnInit {
             }
             DependenciesGongNodeAssociation.children.push(taskNode)
           })
+
+        }
+      )
+
+      /**
+      * fill up the TaskUse part of the mat tree
+      */
+      let taskuseGongNodeStruct: GongNode = {
+        name: "TaskUse",
+        type: GongNodeType.STRUCT,
+        id: 0,
+        uniqueIdPerStack: 13 * nonInstanceNodeId,
+        structName: "TaskUse",
+        associatedStructName: "",
+        children: new Array<GongNode>()
+      }
+      nonInstanceNodeId = nonInstanceNodeId + 1
+      this.gongNodeTree.push(taskuseGongNodeStruct)
+
+      this.frontRepo.TaskUses_array.forEach(
+        taskuseDB => {
+          let taskuseGongNodeInstance: GongNode = {
+            name: taskuseDB.Name,
+            type: GongNodeType.INSTANCE,
+            id: taskuseDB.ID,
+            uniqueIdPerStack: getTaskUseUniqueID(taskuseDB.ID),
+            structName: "TaskUse",
+            associatedStructName: "",
+            children: new Array<GongNode>()
+          }
+          taskuseGongNodeStruct.children.push(taskuseGongNodeInstance)
+
+          // insertion point for per field code
+          /**
+          * let append a node for the association Task
+          */
+          let TaskGongNodeAssociation: GongNode = {
+            name: "(Task) Task",
+            type: GongNodeType.ONE__ZERO_ONE_ASSOCIATION,
+            id: taskuseDB.ID,
+            uniqueIdPerStack: 17 * nonInstanceNodeId,
+            structName: "TaskUse",
+            associatedStructName: "",
+            children: new Array<GongNode>()
+          }
+          nonInstanceNodeId = nonInstanceNodeId + 1
+          taskuseGongNodeInstance.children.push(TaskGongNodeAssociation)
+
+          /**
+            * let append a node for the instance behind the asssociation Task
+            */
+          if (taskuseDB.Task != undefined) {
+            let taskuseGongNodeInstance_Task: GongNode = {
+              name: taskuseDB.Task.Name,
+              type: GongNodeType.INSTANCE,
+              id: taskuseDB.Task.ID,
+              uniqueIdPerStack: // godel numbering (thank you kurt)
+                3 * getTaskUseUniqueID(taskuseDB.ID)
+                + 5 * getTaskUniqueID(taskuseDB.Task.ID),
+              structName: "Task",
+              associatedStructName: "",
+              children: new Array<GongNode>()
+            }
+            TaskGongNodeAssociation.children.push(taskuseGongNodeInstance_Task)
+          }
 
         }
       )

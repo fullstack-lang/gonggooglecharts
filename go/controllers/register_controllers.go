@@ -44,6 +44,13 @@ type ValidationError struct {
 func RegisterControllers(r *gin.Engine) {
 	v1 := r.Group("/api/github.com/fullstack-lang/gonggooglecharts/go")
 	{// insertion point for registrations
+		v1.GET("/v1/ganttcharts", GetGanttCharts)
+		v1.GET("/v1/ganttcharts/:id", GetGanttChart)
+		v1.POST("/v1/ganttcharts", PostGanttChart)
+		v1.PATCH("/v1/ganttcharts/:id", UpdateGanttChart)
+		v1.PUT("/v1/ganttcharts/:id", UpdateGanttChart)
+		v1.DELETE("/v1/ganttcharts/:id", DeleteGanttChart)
+
 		v1.GET("/v1/ressources", GetRessources)
 		v1.GET("/v1/ressources/:id", GetRessource)
 		v1.POST("/v1/ressources", PostRessource)
@@ -57,6 +64,13 @@ func RegisterControllers(r *gin.Engine) {
 		v1.PATCH("/v1/tasks/:id", UpdateTask)
 		v1.PUT("/v1/tasks/:id", UpdateTask)
 		v1.DELETE("/v1/tasks/:id", DeleteTask)
+
+		v1.GET("/v1/taskuses", GetTaskUses)
+		v1.GET("/v1/taskuses/:id", GetTaskUse)
+		v1.POST("/v1/taskuses", PostTaskUse)
+		v1.PATCH("/v1/taskuses/:id", UpdateTaskUse)
+		v1.PUT("/v1/taskuses/:id", UpdateTaskUse)
+		v1.DELETE("/v1/taskuses/:id", DeleteTaskUse)
 
 
 		v1.GET("/commitnb", GetLastCommitNb)

@@ -12,3 +12,11 @@ type Task struct {
 	PercentComplete float64
 	Dependencies    []*Task // preceeding tasks
 }
+
+// TaskUse is a Task used in a given Gantt Diagramm
+// A TaskUse can be used by at most one Diagram
+type TaskUse struct {
+	Name               string
+	Task               *Task
+	RankInGanttDiagram int
+}

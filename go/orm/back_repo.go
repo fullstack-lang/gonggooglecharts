@@ -9,9 +9,13 @@ import (
 // BackRepoStruct supports callback functions
 type BackRepoStruct struct {
 	// insertion point for per struct back repo declarations
+	BackRepoGanttChart BackRepoGanttChartStruct
+
 	BackRepoRessource BackRepoRessourceStruct
 
 	BackRepoTask BackRepoTaskStruct
+
+	BackRepoTaskUse BackRepoTaskUseStruct
 
 	CommitNb uint // this ng is updated at the BackRepo level but also at the BackRepo<GongStruct> level
 }
@@ -28,8 +32,10 @@ func (backRepo *BackRepoStruct) IncrementCommitNb() uint {
 // Init the BackRepoStruct inner variables and link to the database
 func (backRepo *BackRepoStruct) Init(db *gorm.DB) {
 	// insertion point for per struct back repo declarations
+	backRepo.BackRepoGanttChart.Init(db)
 	backRepo.BackRepoRessource.Init(db)
 	backRepo.BackRepoTask.Init(db)
+	backRepo.BackRepoTaskUse.Init(db)
 
 	models.Stage.BackRepo = backRepo
 }
@@ -37,12 +43,16 @@ func (backRepo *BackRepoStruct) Init(db *gorm.DB) {
 // Commit the BackRepoStruct inner variables and link to the database
 func (backRepo *BackRepoStruct) Commit(stage *models.StageStruct) {
 	// insertion point for per struct back repo phase one commit
+	backRepo.BackRepoGanttChart.CommitPhaseOne(stage)
 	backRepo.BackRepoRessource.CommitPhaseOne(stage)
 	backRepo.BackRepoTask.CommitPhaseOne(stage)
+	backRepo.BackRepoTaskUse.CommitPhaseOne(stage)
 
 	// insertion point for per struct back repo phase two commit
+	backRepo.BackRepoGanttChart.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CommitPhaseTwo(backRepo)
+	backRepo.BackRepoTaskUse.CommitPhaseTwo(backRepo)
 
 	backRepo.IncrementCommitNb()
 }
@@ -50,12 +60,16 @@ func (backRepo *BackRepoStruct) Commit(stage *models.StageStruct) {
 // Checkout the database into the stage
 func (backRepo *BackRepoStruct) Checkout(stage *models.StageStruct) {
 	// insertion point for per struct back repo phase one commit
+	backRepo.BackRepoGanttChart.CheckoutPhaseOne()
 	backRepo.BackRepoRessource.CheckoutPhaseOne()
 	backRepo.BackRepoTask.CheckoutPhaseOne()
+	backRepo.BackRepoTaskUse.CheckoutPhaseOne()
 
 	// insertion point for per struct back repo phase two commit
+	backRepo.BackRepoGanttChart.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CheckoutPhaseTwo(backRepo)
+	backRepo.BackRepoTaskUse.CheckoutPhaseTwo(backRepo)
 }
 
 var BackRepo BackRepoStruct
