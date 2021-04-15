@@ -1,4 +1,4 @@
-A gong stack for display google charts
+A gong stack for displaying google charts
 
 ### launch application
 
