@@ -18,8 +18,6 @@ type StageStruct struct { // insertion point for definition of arrays registerin
 
 	Tasks map[*Task]struct{}
 
-	TaskUses map[*TaskUse]struct{}
-
 	AllModelsStructCreateCallback AllModelsStructCreateInterface
 
 	AllModelsStructDeleteCallback AllModelsStructDeleteInterface
@@ -37,8 +35,6 @@ type BackRepoInterface interface {
 	CheckoutRessource(ressource *Ressource)
 	CommitTask(task *Task)
 	CheckoutTask(task *Task)
-	CommitTaskUse(taskuse *TaskUse)
-	CheckoutTaskUse(taskuse *TaskUse)
 	GetLastCommitNb() uint
 }
 
@@ -49,8 +45,6 @@ var Stage StageStruct = StageStruct{ // insertion point for array initiatialisat
 	Ressources: make(map[*Ressource]struct{}, 0),
 
 	Tasks: make(map[*Task]struct{}, 0),
-
-	TaskUses: make(map[*TaskUse]struct{}, 0),
 
 }
 
@@ -364,130 +358,27 @@ func DeleteORMTask(task *Task) {
 	}
 }
 
-func (stage *StageStruct) getTaskUseOrderedStructWithNameField() []*TaskUse {
-	// have alphabetical order generation
-	taskuseOrdered := []*TaskUse{}
-	for taskuse := range stage.TaskUses {
-		taskuseOrdered = append(taskuseOrdered, taskuse)
-	}
-	sort.Slice(taskuseOrdered[:], func(i, j int) bool {
-		return taskuseOrdered[i].Name < taskuseOrdered[j].Name
-	})
-	return taskuseOrdered
-}
-
-// Stage puts taskuse to the model stage
-func (taskuse *TaskUse) Stage() *TaskUse {
-	Stage.TaskUses[taskuse] = __member
-	return taskuse
-}
-
-// Unstage removes taskuse off the model stage
-func (taskuse *TaskUse) Unstage() *TaskUse {
-	delete(Stage.TaskUses, taskuse)
-	return taskuse
-}
-
-// commit taskuse to the back repo (if it is already staged)
-func (taskuse *TaskUse) Commit() *TaskUse {
-	if _, ok := Stage.TaskUses[taskuse]; ok {
-		if Stage.BackRepo != nil {
-			Stage.BackRepo.CommitTaskUse(taskuse)
-		}
-	}
-	return taskuse
-}
-
-// Checkout taskuse to the back repo (if it is already staged)
-func (taskuse *TaskUse) Checkout() *TaskUse {
-	if _, ok := Stage.TaskUses[taskuse]; ok {
-		if Stage.BackRepo != nil {
-			Stage.BackRepo.CheckoutTaskUse(taskuse)
-		}
-	}
-	return taskuse
-}
-
-//
-// Legacy, to be deleted
-//
-
-// StageCopy appends a copy of taskuse to the model stage
-func (taskuse *TaskUse) StageCopy() *TaskUse {
-	_taskuse := new(TaskUse)
-	*_taskuse = *taskuse
-	_taskuse.Stage()
-	return _taskuse
-}
-
-// StageAndCommit appends taskuse to the model stage and commit to the orm repo
-func (taskuse *TaskUse) StageAndCommit() *TaskUse {
-	taskuse.Stage()
-	if Stage.AllModelsStructCreateCallback != nil {
-		Stage.AllModelsStructCreateCallback.CreateORMTaskUse(taskuse)
-	}
-	return taskuse
-}
-
-// DeleteStageAndCommit appends taskuse to the model stage and commit to the orm repo
-func (taskuse *TaskUse) DeleteStageAndCommit() *TaskUse {
-	taskuse.Unstage()
-	DeleteORMTaskUse(taskuse)
-	return taskuse
-}
-
-// StageCopyAndCommit appends a copy of taskuse to the model stage and commit to the orm repo
-func (taskuse *TaskUse) StageCopyAndCommit() *TaskUse {
-	_taskuse := new(TaskUse)
-	*_taskuse = *taskuse
-	_taskuse.Stage()
-	if Stage.AllModelsStructCreateCallback != nil {
-		Stage.AllModelsStructCreateCallback.CreateORMTaskUse(taskuse)
-	}
-	return _taskuse
-}
-
-// CreateORMTaskUse enables dynamic staging of a TaskUse instance
-func CreateORMTaskUse(taskuse *TaskUse) {
-	taskuse.Stage()
-	if Stage.AllModelsStructCreateCallback != nil {
-		Stage.AllModelsStructCreateCallback.CreateORMTaskUse(taskuse)
-	}
-}
-
-// DeleteORMTaskUse enables dynamic staging of a TaskUse instance
-func DeleteORMTaskUse(taskuse *TaskUse) {
-	taskuse.Unstage()
-	if Stage.AllModelsStructDeleteCallback != nil {
-		Stage.AllModelsStructDeleteCallback.DeleteORMTaskUse(taskuse)
-	}
-}
-
 // swagger:ignore
 type AllModelsStructCreateInterface interface { // insertion point for Callbacks on creation
 	CreateORMGanttChart(GanttChart *GanttChart)
 	CreateORMRessource(Ressource *Ressource)
 	CreateORMTask(Task *Task)
-	CreateORMTaskUse(TaskUse *TaskUse)
 }
 
 type AllModelsStructDeleteInterface interface { // insertion point for Callbacks on deletion
 	DeleteORMGanttChart(GanttChart *GanttChart)
 	DeleteORMRessource(Ressource *Ressource)
 	DeleteORMTask(Task *Task)
-	DeleteORMTaskUse(TaskUse *TaskUse)
 }
 
 func (stage *StageStruct) Reset() { // insertion point for array reset
 	stage.GanttCharts = make(map[*GanttChart]struct{}, 0)
 	stage.Ressources = make(map[*Ressource]struct{}, 0)
 	stage.Tasks = make(map[*Task]struct{}, 0)
-	stage.TaskUses = make(map[*TaskUse]struct{}, 0)
 }
 
 func (stage *StageStruct) Nil() { // insertion point for array nil
 	stage.GanttCharts = nil
 	stage.Ressources = nil
 	stage.Tasks = nil
-	stage.TaskUses = nil
 }

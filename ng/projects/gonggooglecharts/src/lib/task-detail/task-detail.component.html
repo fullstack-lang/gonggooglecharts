@@ -94,6 +94,17 @@
     </div>
     <div class="details__item">
     <mat-form-field>
+        <mat-label><- Tasks</mat-label>
+        <mat-select [(ngModel)]="task.GanttChart_Tasks_reverse">
+            <mat-option>None</mat-option>
+            <mat-option *ngFor="let ganttchart of frontRepo.GanttCharts_array" [value]="ganttchart">
+                {{ganttchart.Name}}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
+</div>
+    <div class="details__item">
+    <mat-form-field>
         <mat-label><- Dependencies</mat-label>
         <mat-select [(ngModel)]="task.Task_Dependencies_reverse">
             <mat-option>None</mat-option>

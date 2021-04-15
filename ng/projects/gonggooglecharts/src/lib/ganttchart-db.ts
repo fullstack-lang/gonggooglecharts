@@ -1,5 +1,5 @@
 // insertion point for imports
-import { TaskUseDB } from './taskuse-db'
+import { TaskDB } from './task-db'
 
 // usefull for managing pointer ID values that can be nullable
 import { NullInt64 } from './front-repo.service'
@@ -13,5 +13,5 @@ export class GanttChartDB {
 	Name?: string
 
 	// insertion point for other declarations
-	Tasks?: Array<TaskUseDB>
+	Tasks?: Array<TaskDB>
 }

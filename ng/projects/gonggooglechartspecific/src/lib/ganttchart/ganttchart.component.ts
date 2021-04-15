@@ -52,34 +52,6 @@ export class GanttchartComponent implements OnInit {
 
   ngOnInit(): void {
 
-    this.charts.push({
-      title: "gantt",
-      type: ChartType.Gantt,
-      columns: [
-        'Task ID',
-        'Task Name',
-        'Resource',
-        'Start Date',
-        'End Date',
-        'Duration',
-        'Percent Complete',
-        'Dependencies'
-      ],
-      data: [
-        ['Research', 'Identify a gant js framework', null,
-          new Date(2015, 0, 1), new Date(2015, 0, 30), null, 1, null],
-        ['Write', 'Extract the model in go', 'write',
-          null, new Date(2015, 0, 9), daysToMilliseconds(3), 25, 'Research,Outline'],
-        ['Cite', 'Develop backend', 'write',
-          null, new Date(2015, 0, 7), daysToMilliseconds(1), 20, 'Research'],
-        ['Complete', 'Develop front-end', 'complete',
-          null, new Date(2015, 0, 10), daysToMilliseconds(1), 0, 'Cite,Write'],
-        ['Outline', 'Develop stand-alone application that uses the stack', 'write',
-          null, new Date(2015, 0, 6), daysToMilliseconds(1), 100, 'Research']
-      ]
-
-    })
-
     this.gonggooglechartFrontRepoService.pull().subscribe(
       gonggooglechartsFrontRepo => {
         this.gonggooglechartFrontRepo = gonggooglechartsFrontRepo
@@ -105,9 +77,19 @@ export class GanttchartComponent implements OnInit {
             ]
             ganttChart.Tasks.forEach(
               task => {
+
+                console.log(task.Name + " start at " + task.Start)
+
+                let start = new Date(task.Start)
+                console.log("start " + start.getFullYear() + " " + start.getMonth() + " " + start.getDay())
+
+                let end = new Date(task.End)
+                console.log("end " + end.getFullYear() + " " + end.getMonth() + " " + end.getDay())
+
                 ganttTargetChart.data.push(
                   [task.Name, task.Name, null,
-                  new Date(2015, 0, 1), new Date(2015, 0, 30), daysToMilliseconds(3), 1, null]
+                  new Date(start.getFullYear(), start.getMonth(), start.getDay()),
+                  new Date(end.getFullYear(), end.getMonth(), end.getDay()), daysToMilliseconds(3), 1, null]
                 )
               }
             )

@@ -78,12 +78,15 @@ export class TaskService {
     // insertion point for reset of reverse pointers (to avoid circular JSON)
     taskdb.Ressource = {}
     taskdb.Dependencies = []
+    let _GanttChart_Tasks_reverse = taskdb.GanttChart_Tasks_reverse
+    taskdb.GanttChart_Tasks_reverse = {}
     let _Task_Dependencies_reverse = taskdb.Task_Dependencies_reverse
     taskdb.Task_Dependencies_reverse = {}
 
     return this.http.put(url, taskdb, this.httpOptions).pipe(
       tap(_ => {
         // insertion point for restoration of reverse pointers
+        taskdb.GanttChart_Tasks_reverse = _GanttChart_Tasks_reverse
         taskdb.Task_Dependencies_reverse = _Task_Dependencies_reverse
         this.log(`updated taskdb id=${taskdb.ID}`)
       }),

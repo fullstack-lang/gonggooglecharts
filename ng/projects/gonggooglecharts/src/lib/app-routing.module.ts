@@ -14,10 +14,6 @@ import { TasksTableComponent } from './tasks-table/tasks-table.component'
 import { TaskDetailComponent } from './task-detail/task-detail.component'
 import { TaskPresentationComponent } from './task-presentation/task-presentation.component'
 
-import { TaskUsesTableComponent } from './taskuses-table/taskuses-table.component'
-import { TaskUseDetailComponent } from './taskuse-detail/taskuse-detail.component'
-import { TaskUsePresentationComponent } from './taskuse-presentation/taskuse-presentation.component'
-
 
 const routes: Routes = [ // insertion point for routes declarations
 	{ path: 'ganttcharts', component: GanttChartsTableComponent, outlet: 'table' },
@@ -40,13 +36,6 @@ const routes: Routes = [ // insertion point for routes declarations
 	{ path: 'task-detail/:id', component: TaskDetailComponent, outlet: 'editor' },
 	{ path: 'task-presentation/:id', component: TaskPresentationComponent, outlet: 'presentation' },
 	{ path: 'task-presentation-special/:id', component: TaskPresentationComponent, outlet: 'taskpres' },
-
-	{ path: 'taskuses', component: TaskUsesTableComponent, outlet: 'table' },
-	{ path: 'taskuse-adder', component: TaskUseDetailComponent, outlet: 'editor' },
-	{ path: 'taskuse-adder/:id/:association', component: TaskUseDetailComponent, outlet: 'editor' },
-	{ path: 'taskuse-detail/:id', component: TaskUseDetailComponent, outlet: 'editor' },
-	{ path: 'taskuse-presentation/:id', component: TaskUsePresentationComponent, outlet: 'presentation' },
-	{ path: 'taskuse-presentation-special/:id', component: TaskUsePresentationComponent, outlet: 'taskusepres' },
 
 ];
 

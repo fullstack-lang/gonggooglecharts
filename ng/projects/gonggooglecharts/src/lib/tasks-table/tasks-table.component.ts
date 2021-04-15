@@ -70,6 +70,7 @@ export class TasksTableComponent implements OnInit {
         "End",
         "Duration",
         "PercentComplete",
+        "Tasks",
         "Dependencies",
       ]
     } else {
@@ -81,6 +82,7 @@ export class TasksTableComponent implements OnInit {
         "End",
         "Duration",
         "PercentComplete",
+        "Tasks",
         "Dependencies",
       ]
       this.selection = new SelectionModel<TaskDB>(allowMultiSelect, this.initialSelection);

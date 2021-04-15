@@ -187,13 +187,13 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseTwoInstance(backR
 				ganttchartDB.Name_Data.String = ganttchart.Name
 				ganttchartDB.Name_Data.Valid = true
 
-				// commit a slice of pointer translates to update reverse pointer to TaskUse, i.e.
-				for _, taskuse := range ganttchart.Tasks {
-					if taskuseDBID, ok := (*backRepo.BackRepoTaskUse.Map_TaskUsePtr_TaskUseDBID)[taskuse]; ok {
-						if taskuseDB, ok := (*backRepo.BackRepoTaskUse.Map_TaskUseDBID_TaskUseDB)[taskuseDBID]; ok {
-							taskuseDB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
-							taskuseDB.GanttChart_TasksDBID.Valid = true
-							if q := backRepoGanttChart.db.Save(&taskuseDB); q.Error != nil {
+				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
+				for _, task := range ganttchart.Tasks {
+					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
+						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
+							taskDB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
+							taskDB.GanttChart_TasksDBID.Valid = true
+							if q := backRepoGanttChart.db.Save(&taskDB); q.Error != nil {
 								return q.Error
 							}
 						}
@@ -281,13 +281,13 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseTwoInstance(bac
 			//
 			ganttchart.Name = ganttchartDB.Name_Data.String
 
-			// parse all TaskUseDB and redeem the array of poiners to GanttChart
+			// parse all TaskDB and redeem the array of poiners to GanttChart
 			// first reset the slice
 			ganttchart.Tasks = ganttchart.Tasks[:0]
-			for _, TaskUseDB := range *backRepo.BackRepoTaskUse.Map_TaskUseDBID_TaskUseDB {
-				if TaskUseDB.GanttChart_TasksDBID.Int64 == int64(ganttchartDB.ID) {
-					TaskUse := (*backRepo.BackRepoTaskUse.Map_TaskUseDBID_TaskUsePtr)[TaskUseDB.ID]
-					ganttchart.Tasks = append(ganttchart.Tasks, TaskUse)
+			for _, TaskDB := range *backRepo.BackRepoTask.Map_TaskDBID_TaskDB {
+				if TaskDB.GanttChart_TasksDBID.Int64 == int64(ganttchartDB.ID) {
+					Task := (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[TaskDB.ID]
+					ganttchart.Tasks = append(ganttchart.Tasks, Task)
 				}
 			}
 

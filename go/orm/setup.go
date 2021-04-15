@@ -35,7 +35,6 @@ func AutoMigrate(db *gorm.DB) {
 	  &GanttChartDB{},
 	  &RessourceDB{},
 	  &TaskDB{},
-	  &TaskUseDB{},
 	)
 
 	if _db.Error != nil {
@@ -49,5 +48,4 @@ func ResetDB(db *gorm.DB) { // insertion point for reference to structs
 	  db.Delete(&GanttChartDB{})
 	  db.Delete(&RessourceDB{})
 	  db.Delete(&TaskDB{})
-	  db.Delete(&TaskUseDB{})
 }

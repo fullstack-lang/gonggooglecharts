@@ -52,6 +52,9 @@ type TaskAPI struct {
 	// Declation for basic field taskDB.PercentComplete {{BasicKind}} (to be completed)
 	PercentComplete_Data sql.NullFloat64
 
+	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
+	GanttChart_TasksDBID sql.NullInt64
+
 	// Implementation of a reverse ID for field Task{}.Dependencies []*Task
 	Task_DependenciesDBID sql.NullInt64
 

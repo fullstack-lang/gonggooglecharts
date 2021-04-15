@@ -15,8 +15,6 @@ type BackRepoStruct struct {
 
 	BackRepoTask BackRepoTaskStruct
 
-	BackRepoTaskUse BackRepoTaskUseStruct
-
 	CommitNb uint // this ng is updated at the BackRepo level but also at the BackRepo<GongStruct> level
 }
 
@@ -35,7 +33,6 @@ func (backRepo *BackRepoStruct) Init(db *gorm.DB) {
 	backRepo.BackRepoGanttChart.Init(db)
 	backRepo.BackRepoRessource.Init(db)
 	backRepo.BackRepoTask.Init(db)
-	backRepo.BackRepoTaskUse.Init(db)
 
 	models.Stage.BackRepo = backRepo
 }
@@ -46,13 +43,11 @@ func (backRepo *BackRepoStruct) Commit(stage *models.StageStruct) {
 	backRepo.BackRepoGanttChart.CommitPhaseOne(stage)
 	backRepo.BackRepoRessource.CommitPhaseOne(stage)
 	backRepo.BackRepoTask.CommitPhaseOne(stage)
-	backRepo.BackRepoTaskUse.CommitPhaseOne(stage)
 
 	// insertion point for per struct back repo phase two commit
 	backRepo.BackRepoGanttChart.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CommitPhaseTwo(backRepo)
-	backRepo.BackRepoTaskUse.CommitPhaseTwo(backRepo)
 
 	backRepo.IncrementCommitNb()
 }
@@ -63,13 +58,11 @@ func (backRepo *BackRepoStruct) Checkout(stage *models.StageStruct) {
 	backRepo.BackRepoGanttChart.CheckoutPhaseOne()
 	backRepo.BackRepoRessource.CheckoutPhaseOne()
 	backRepo.BackRepoTask.CheckoutPhaseOne()
-	backRepo.BackRepoTaskUse.CheckoutPhaseOne()
 
 	// insertion point for per struct back repo phase two commit
 	backRepo.BackRepoGanttChart.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CheckoutPhaseTwo(backRepo)
-	backRepo.BackRepoTaskUse.CheckoutPhaseTwo(backRepo)
 }
 
 var BackRepo BackRepoStruct

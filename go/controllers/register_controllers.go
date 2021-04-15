@@ -65,13 +65,6 @@ func RegisterControllers(r *gin.Engine) {
 		v1.PUT("/v1/tasks/:id", UpdateTask)
 		v1.DELETE("/v1/tasks/:id", DeleteTask)
 
-		v1.GET("/v1/taskuses", GetTaskUses)
-		v1.GET("/v1/taskuses/:id", GetTaskUse)
-		v1.POST("/v1/taskuses", PostTaskUse)
-		v1.PATCH("/v1/taskuses/:id", UpdateTaskUse)
-		v1.PUT("/v1/taskuses/:id", UpdateTaskUse)
-		v1.DELETE("/v1/taskuses/:id", DeleteTaskUse)
-
 
 		v1.GET("/commitnb", GetLastCommitNb)
 	}

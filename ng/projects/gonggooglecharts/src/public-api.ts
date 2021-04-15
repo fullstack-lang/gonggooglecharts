@@ -33,11 +33,4 @@ export * from './lib/task-db'
 export * from './lib/task-api'
 export * from './lib/task.service'
 
-export * from './lib/taskuse-detail/taskuse-detail.component'
-export * from './lib/taskuse-presentation/taskuse-presentation.component'
-export * from './lib/taskuses-table/taskuses-table.component'
-export * from './lib/taskuse-db'
-export * from './lib/taskuse-api'
-export * from './lib/taskuse.service'
-
 

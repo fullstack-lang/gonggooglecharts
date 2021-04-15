@@ -41,10 +41,6 @@ import { TasksTableComponent } from './tasks-table/tasks-table.component'
 import { TaskDetailComponent } from './task-detail/task-detail.component'
 import { TaskPresentationComponent } from './task-presentation/task-presentation.component'
 
-import { TaskUsesTableComponent } from './taskuses-table/taskuses-table.component'
-import { TaskUseDetailComponent } from './taskuse-detail/taskuse-detail.component'
-import { TaskUsePresentationComponent } from './taskuse-presentation/taskuse-presentation.component'
-
 
 @NgModule({
 	declarations: [
@@ -60,10 +56,6 @@ import { TaskUsePresentationComponent } from './taskuse-presentation/taskuse-pre
 		TasksTableComponent,
 		TaskDetailComponent,
 		TaskPresentationComponent,
-
-		TaskUsesTableComponent,
-		TaskUseDetailComponent,
-		TaskUsePresentationComponent,
 
 
 		SplitterComponent,
@@ -108,10 +100,6 @@ import { TaskUsePresentationComponent } from './taskuse-presentation/taskuse-pre
 		TasksTableComponent,
 		TaskDetailComponent,
 		TaskPresentationComponent,
-
-		TaskUsesTableComponent,
-		TaskUseDetailComponent,
-		TaskUsePresentationComponent,
 
 
 		SplitterComponent,

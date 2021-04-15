@@ -113,6 +113,12 @@ export class TaskDetailComponent implements OnInit {
 
 		if (id != 0 && association == undefined) {
 			// insertion point for saving value of reverse pointers
+			if (this.task.GanttChart_Tasks_reverse != undefined) {
+				this.task.GanttChart_TasksDBID = new NullInt64
+				this.task.GanttChart_TasksDBID.Int64 = this.task.GanttChart_Tasks_reverse.ID
+				this.task.GanttChart_TasksDBID.Valid = true
+				this.task.GanttChart_Tasks_reverse = undefined // very important, otherwise, circular JSON
+			}
 			if (this.task.Task_Dependencies_reverse != undefined) {
 				this.task.Task_DependenciesDBID = new NullInt64
 				this.task.Task_DependenciesDBID.Int64 = this.task.Task_Dependencies_reverse.ID
@@ -129,6 +135,11 @@ export class TaskDetailComponent implements OnInit {
 		} else {
 			switch (association) {
 				// insertion point for saving value of ONE_MANY association reverse pointer
+				case "GanttChart_Tasks":
+					this.task.GanttChart_TasksDBID = new NullInt64
+					this.task.GanttChart_TasksDBID.Int64 = id
+					this.task.GanttChart_TasksDBID.Valid = true
+					break
 				case "Task_Dependencies":
 					this.task.Task_DependenciesDBID = new NullInt64
 					this.task.Task_DependenciesDBID.Int64 = id
