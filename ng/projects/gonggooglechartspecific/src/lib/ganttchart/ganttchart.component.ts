@@ -137,8 +137,9 @@ export class GanttchartComponent implements OnInit {
                 // see https://developers.google.com/chart/interactive/docs/gallery/ganttchart#data-format
 
                 let googleGanttTask = new (GoogleGanttTask)
-                googleGanttTask.Task_Name = task.Name
+
                 googleGanttTask.Task_ID = task.Name
+                googleGanttTask.Task_Name = task.DisplayedName
                 googleGanttTask.Resource = task.RessourceName
                 googleGanttTask.Start = new Date(start.getFullYear(), start.getMonth(), start.getDay())
                 googleGanttTask.End = new Date(end.getFullYear(), end.getMonth(), end.getDay())
