@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-
+import { Observable, Subscription, timer } from 'rxjs';
 import * as gonggooglechart from 'gonggooglecharts'
 
 import {
@@ -31,6 +31,17 @@ export class GantChartStruct {
 })
 export class GanttchartComponent implements OnInit {
 
+
+  /**
+ * the component is refreshed when modification are performed in the back repo 
+ * 
+ * the checkCommitNbTimer polls the commit number of the back repo
+ * if the commit number has increased, it pulls the front repo and redraw the diagram
+ */
+  checkGongdocCommitNbTimer: Observable<number> = timer(500, 500);
+  lastCommitNb = -1
+  currTime: number
+
   public gonggooglechartFrontRepo: gonggooglechart.FrontRepo
 
   public charts: {
@@ -45,12 +56,36 @@ export class GanttchartComponent implements OnInit {
   public chart!: GoogleChartComponent;
 
   constructor(
-    private gonggooglechartFrontRepoService: gonggooglechart.FrontRepoService
+    private gonggooglechartFrontRepoService: gonggooglechart.FrontRepoService,
+    private gonggooglechartCommitNbService: gonggooglechart.CommitNbService,
   ) {
 
   }
 
   ngOnInit(): void {
+
+    this.checkGongdocCommitNbTimer.subscribe(
+      currTime => {
+        this.currTime = currTime
+
+        // see above for the explanation
+        this.gonggooglechartCommitNbService.getCommitNb().subscribe(
+          commitNb => {
+            if (this.lastCommitNb < commitNb) {
+
+              console.log("last commit nb " + this.lastCommitNb + " new: " + commitNb)
+              this.refresh()
+              this.lastCommitNb = commitNb
+            }
+          }
+        )
+      }
+    )
+
+  }
+  refresh(): void {
+
+    this.charts = []
 
     this.gonggooglechartFrontRepoService.pull().subscribe(
       gonggooglechartsFrontRepo => {

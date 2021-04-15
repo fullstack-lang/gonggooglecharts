@@ -1,3 +1,6 @@
+<mat-toolbar>
+    <span>Gannt chart {{lastCommitNb}}</span>
+</mat-toolbar>
 <div *ngFor="let chart of charts">
     <google-chart width="600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
         [options]="chart.options" (ready)="onReady()" (select)="onSelect($event)" (error)="onError($event)"

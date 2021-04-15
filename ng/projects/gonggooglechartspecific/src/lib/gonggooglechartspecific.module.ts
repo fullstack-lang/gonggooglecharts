@@ -4,6 +4,8 @@ import { GanttchartComponent } from './ganttchart/ganttchart.component';
 import { BrowserModule } from '@angular/platform-browser'
 import { GoogleChartsModule } from 'angular-google-charts';
 
+import { MatToolbarModule } from '@angular/material/toolbar'
+
 
 
 @NgModule({
@@ -13,7 +15,8 @@ import { GoogleChartsModule } from 'angular-google-charts';
   ],
   imports: [
     BrowserModule,
-    GoogleChartsModule
+    GoogleChartsModule,
+    MatToolbarModule
   ],
   exports: [
     GonggooglechartspecificComponent,
