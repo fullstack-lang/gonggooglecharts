@@ -1,5 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 
+import * as gonggooglechart from 'gonggooglecharts'
+
 import {
   ChartErrorEvent,
   ChartMouseLeaveEvent,
@@ -14,6 +16,13 @@ function daysToMilliseconds(days: number): number {
   return days * 24 * 60 * 60 * 1000;
 }
 
+export class GantChartStruct {
+  title: string;
+  type: ChartType;
+  data: any[][];
+  columns?: Column[];
+  options?: {};
+}
 
 @Component({
   selector: 'lib-ganttchart',
@@ -21,6 +30,8 @@ function daysToMilliseconds(days: number): number {
   styleUrls: ['./ganttchart.component.css']
 })
 export class GanttchartComponent implements OnInit {
+
+  public gonggooglechartFrontRepo: gonggooglechart.FrontRepo
 
   public charts: {
     title: string;
@@ -30,17 +41,16 @@ export class GanttchartComponent implements OnInit {
     options?: {};
   }[] = [];
 
-  public totos: {
-    title: string;
-  }[] = [];
-
   @ViewChild('chart', { static: true })
   public chart!: GoogleChartComponent;
 
-  constructor() {
-    this.totos.push({
-      title: "toto",
-    })
+  constructor(
+    private gonggooglechartFrontRepoService: gonggooglechart.FrontRepoService
+  ) {
+
+  }
+
+  ngOnInit(): void {
 
     this.charts.push({
       title: "gantt",
@@ -69,10 +79,44 @@ export class GanttchartComponent implements OnInit {
       ]
 
     })
-  }
 
-  ngOnInit(): void {
+    this.gonggooglechartFrontRepoService.pull().subscribe(
+      gonggooglechartsFrontRepo => {
+        this.gonggooglechartFrontRepo = gonggooglechartsFrontRepo
 
+        this.gonggooglechartFrontRepo.GanttCharts_array.forEach(
+          ganttChart => {
+            let ganttTargetChart = new GantChartStruct()
+            ganttTargetChart.title = ganttChart.Name
+            ganttTargetChart.type = ChartType.Gantt
+            ganttTargetChart.columns = [
+              'Task ID',
+              'Task Name',
+              'Resource',
+              'Start Date',
+              'End Date',
+              'Duration',
+              'Percent Complete',
+              'Dependencies'
+            ]
+            ganttTargetChart.data = [
+              //   ['Research', 'Identify a gant js framework', null,
+              //     new Date(2015, 0, 1), new Date(2015, 0, 30), daysToMilliseconds(3), 1, null],
+            ]
+            ganttChart.Tasks.forEach(
+              task => {
+                ganttTargetChart.data.push(
+                  [task.Name, task.Name, null,
+                  new Date(2015, 0, 1), new Date(2015, 0, 30), daysToMilliseconds(3), 1, null]
+                )
+              }
+            )
+
+            this.charts.push(ganttTargetChart)
+          }
+        )
+      }
+    )
 
   }
 
