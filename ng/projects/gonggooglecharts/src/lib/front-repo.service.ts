@@ -195,6 +195,13 @@ export class FrontRepoService {
                     task.Ressource = _ressource
                   }
                 }
+                // insertion point for pointer field Dependencies redeeming
+                {
+                  let _task = FrontRepoSingloton.Tasks.get(task.DependenciesID.Int64)
+                  if (_task) {
+                    task.Dependencies = _task
+                  }
+                }
 
                 // insertion point for redeeming ONE-MANY associations
                 // insertion point for slice of pointer field GanttChart.Tasks redeeming
@@ -207,19 +214,6 @@ export class FrontRepoService {
                     _ganttchart.Tasks.push(task)
                     if (task.GanttChart_Tasks_reverse == undefined) {
                       task.GanttChart_Tasks_reverse = _ganttchart
-                    }
-                  }
-                }
-                // insertion point for slice of pointer field Task.Dependencies redeeming
-                {
-                  let _task = FrontRepoSingloton.Tasks.get(task.Task_DependenciesDBID.Int64)
-                  if (_task) {
-                    if (_task.Dependencies == undefined) {
-                      _task.Dependencies = new Array<TaskDB>()
-                    }
-                    _task.Dependencies.push(task)
-                    if (task.Task_Dependencies_reverse == undefined) {
-                      task.Task_Dependencies_reverse = _task
                     }
                   }
                 }
@@ -370,6 +364,13 @@ export class FrontRepoService {
                     task.Ressource = _ressource
                   }
                 }
+                // insertion point for pointer field Dependencies redeeming
+                {
+                  let _task = FrontRepoSingloton.Tasks.get(task.DependenciesID.Int64)
+                  if (_task) {
+                    task.Dependencies = _task
+                  }
+                }
 
                 // insertion point for redeeming ONE-MANY associations 
                 // insertion point for slice of pointer field GanttChart.Tasks redeeming
@@ -382,19 +383,6 @@ export class FrontRepoService {
                     _ganttchart.Tasks.push(task)
                     if (task.GanttChart_Tasks_reverse == undefined) {
                       task.GanttChart_Tasks_reverse = _ganttchart
-                    }
-                  }
-                }
-                // insertion point for slice of pointer field Task.Dependencies redeeming
-                {
-                  let _task = FrontRepoSingloton.Tasks.get(task.Task_DependenciesDBID.Int64)
-                  if (_task) {
-                    if (_task.Dependencies == undefined) {
-                      _task.Dependencies = new Array<TaskDB>()
-                    }
-                    _task.Dependencies.push(task)
-                    if (task.Task_Dependencies_reverse == undefined) {
-                      task.Task_Dependencies_reverse = _task
                     }
                   }
                 }

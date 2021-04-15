@@ -36,6 +36,10 @@
         <td class="mat-cell">PercentComplete</td>
         <td class="mat-cell">{{task.PercentComplete}}</td>
     </tr>
+    <tr class="mat-row">
+        <td class="mat-cell">Dependencies</td>
+        <td class="mat-cell">{{task.DependenciesName}}</td>
+    </tr>
 </table>
 <!-- hack to force loading of mat table style an error is generated but it is a know angular issue https://github.com/angular/components/issues/10941 -->
 <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">

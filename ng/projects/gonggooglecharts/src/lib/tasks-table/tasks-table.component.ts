@@ -70,8 +70,8 @@ export class TasksTableComponent implements OnInit {
         "End",
         "Duration",
         "PercentComplete",
-        "Tasks",
         "Dependencies",
+        "Tasks",
       ]
     } else {
       this.displayedColumns = ['select', 'ID', // insertion point for columns to display
@@ -82,8 +82,8 @@ export class TasksTableComponent implements OnInit {
         "End",
         "Duration",
         "PercentComplete",
-        "Tasks",
         "Dependencies",
+        "Tasks",
       ]
       this.selection = new SelectionModel<TaskDB>(allowMultiSelect, this.initialSelection);
     }

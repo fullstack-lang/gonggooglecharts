@@ -361,34 +361,37 @@ export class SidebarComponent implements OnInit {
           }
 
           /**
-          * let append a node for the slide of pointer Dependencies
+          * let append a node for the association Dependencies
           */
           let DependenciesGongNodeAssociation: GongNode = {
             name: "(Task) Dependencies",
-            type: GongNodeType.ONE__ZERO_MANY_ASSOCIATION,
+            type: GongNodeType.ONE__ZERO_ONE_ASSOCIATION,
             id: taskDB.ID,
-            uniqueIdPerStack: 19 * nonInstanceNodeId,
+            uniqueIdPerStack: 17 * nonInstanceNodeId,
             structName: "Task",
-            associatedStructName: "Task",
+            associatedStructName: "",
             children: new Array<GongNode>()
           }
           nonInstanceNodeId = nonInstanceNodeId + 1
           taskGongNodeInstance.children.push(DependenciesGongNodeAssociation)
 
-          taskDB.Dependencies?.forEach(taskDB => {
-            let taskNode: GongNode = {
-              name: taskDB.Name,
+          /**
+            * let append a node for the instance behind the asssociation Dependencies
+            */
+          if (taskDB.Dependencies != undefined) {
+            let taskGongNodeInstance_Dependencies: GongNode = {
+              name: taskDB.Dependencies.Name,
               type: GongNodeType.INSTANCE,
-              id: taskDB.ID,
+              id: taskDB.Dependencies.ID,
               uniqueIdPerStack: // godel numbering (thank you kurt)
-                7 * getTaskUniqueID(taskDB.ID)
-                + 11 * getTaskUniqueID(taskDB.ID),
+                3 * getTaskUniqueID(taskDB.ID)
+                + 5 * getTaskUniqueID(taskDB.Dependencies.ID),
               structName: "Task",
               associatedStructName: "",
               children: new Array<GongNode>()
             }
-            DependenciesGongNodeAssociation.children.push(taskNode)
-          })
+            DependenciesGongNodeAssociation.children.push(taskGongNodeInstance_Dependencies)
+          }
 
         }
       )

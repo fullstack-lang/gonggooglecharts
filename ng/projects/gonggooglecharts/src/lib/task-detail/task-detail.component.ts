@@ -110,6 +110,18 @@ export class TaskDetailComponent implements OnInit {
 			this.Duration_Hours * (3600 * 1000 * 1000 * 1000) +
 			this.Duration_Minutes * (60 * 1000 * 1000 * 1000) +
 			this.Duration_Seconds * (1000 * 1000 * 1000)
+		if (this.task.DependenciesID == undefined) {
+			this.task.DependenciesID = new NullInt64
+		}
+		if (this.task.Dependencies != undefined) {
+			this.task.DependenciesID.Int64 = this.task.Dependencies.ID
+			this.task.DependenciesID.Valid = true
+			this.task.DependenciesName = this.task.Dependencies.Name
+		} else {
+			this.task.DependenciesID.Int64 = 0
+			this.task.DependenciesID.Valid = true
+			this.task.DependenciesName = ""
+		}
 
 		if (id != 0 && association == undefined) {
 			// insertion point for saving value of reverse pointers
@@ -118,12 +130,6 @@ export class TaskDetailComponent implements OnInit {
 				this.task.GanttChart_TasksDBID.Int64 = this.task.GanttChart_Tasks_reverse.ID
 				this.task.GanttChart_TasksDBID.Valid = true
 				this.task.GanttChart_Tasks_reverse = undefined // very important, otherwise, circular JSON
-			}
-			if (this.task.Task_Dependencies_reverse != undefined) {
-				this.task.Task_DependenciesDBID = new NullInt64
-				this.task.Task_DependenciesDBID.Int64 = this.task.Task_Dependencies_reverse.ID
-				this.task.Task_DependenciesDBID.Valid = true
-				this.task.Task_Dependencies_reverse = undefined // very important, otherwise, circular JSON
 			}
 
 			this.taskService.updateTask(this.task)
@@ -139,11 +145,6 @@ export class TaskDetailComponent implements OnInit {
 					this.task.GanttChart_TasksDBID = new NullInt64
 					this.task.GanttChart_TasksDBID.Int64 = id
 					this.task.GanttChart_TasksDBID.Valid = true
-					break
-				case "Task_Dependencies":
-					this.task.Task_DependenciesDBID = new NullInt64
-					this.task.Task_DependenciesDBID.Int64 = id
-					this.task.Task_DependenciesDBID.Valid = true
 					break
 			}
 			this.taskService.postTask(this.task).subscribe(task => {

@@ -11,17 +11,30 @@ import {
   Column,
   GoogleChartComponent
 } from 'angular-google-charts';
+import { take } from 'rxjs/operators';
 
 function daysToMilliseconds(days: number): number {
   return days * 24 * 60 * 60 * 1000;
 }
 
-export class GantChartStruct {
+class GoogleGanttChart {
   title: string;
   type: ChartType;
   data: any[][];
   columns?: Column[];
   options?: {};
+}
+
+class GoogleGanttTask {
+  Task_ID: string;
+  Task_Name: string;
+  Resource: string;
+  Start: Date;
+  End: Date;
+  Duration: number;
+  PercentComplete: number;
+  Dependencies: string;
+
 }
 
 @Component({
@@ -93,7 +106,7 @@ export class GanttchartComponent implements OnInit {
 
         this.gonggooglechartFrontRepo.GanttCharts_array.forEach(
           ganttChart => {
-            let ganttTargetChart = new GantChartStruct()
+            let ganttTargetChart = new GoogleGanttChart()
             ganttTargetChart.title = ganttChart.Name
             ganttTargetChart.type = ChartType.Gantt
             ganttTargetChart.columns = [
@@ -121,15 +134,27 @@ export class GanttchartComponent implements OnInit {
                 let end = new Date(task.End)
                 console.log("end " + end.getFullYear() + " " + end.getMonth() + " " + end.getDay())
 
+                // see https://developers.google.com/chart/interactive/docs/gallery/ganttchart#data-format
+
+                let googleGanttTask = new (GoogleGanttTask)
+                googleGanttTask.Task_Name = task.Name
+                googleGanttTask.Task_ID = task.Name
+                googleGanttTask.Resource = task.RessourceName
+                googleGanttTask.Start = new Date(start.getFullYear(), start.getMonth(), start.getDay())
+                googleGanttTask.End = new Date(end.getFullYear(), end.getMonth(), end.getDay())
+                googleGanttTask.Duration = daysToMilliseconds(0)
+                googleGanttTask.PercentComplete = task.PercentComplete
+                googleGanttTask.Dependencies = task.Dependencies?.Name
+
                 ganttTargetChart.data.push(
-                  [task.Name,
-                  task.Name,
-                  task.RessourceName,
-                  new Date(start.getFullYear(), start.getMonth(), start.getDay()),
-                  new Date(end.getFullYear(), end.getMonth(), end.getDay()),
-                  daysToMilliseconds(50),
-                  task.PercentComplete,
-                    null]
+                  [googleGanttTask.Task_ID,
+                  googleGanttTask.Task_Name,
+                  googleGanttTask.Resource,
+                  googleGanttTask.Start,
+                  googleGanttTask.End,
+                  googleGanttTask.Duration,
+                  googleGanttTask.PercentComplete,
+                  googleGanttTask.Dependencies]
                 )
               }
             )

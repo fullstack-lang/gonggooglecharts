@@ -24,11 +24,11 @@ export class TaskDB {
 	RessourceName?: string
 
 	Duration_string?: string
-	Dependencies?: Array<TaskDB>
+	Dependencies?: TaskDB
+	DependenciesID?: NullInt64
+	DependenciesName?: string
+
 	GanttChart_TasksDBID?: NullInt64
 	GanttChart_Tasks_reverse?: GanttChartDB
-
-	Task_DependenciesDBID?: NullInt64
-	Task_Dependencies_reverse?: TaskDB
 
 }

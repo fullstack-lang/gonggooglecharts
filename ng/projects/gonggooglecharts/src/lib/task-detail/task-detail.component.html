@@ -90,7 +90,15 @@
         </form>
     </div>
     <div class="details__item">
-        <button mat-raised-button (click)="openReverseSelection('Task', 'Task_DependenciesDBID')">Dependencies</button>
+        <mat-form-field>
+            <mat-label>Dependencies</mat-label>
+            <mat-select [(ngModel)]="task.Dependencies">
+                <mat-option>None</mat-option>
+                <mat-option *ngFor="let task of frontRepo.Tasks_array" [value]="task">
+                    {{task.Name}}
+                </mat-option>
+            </mat-select>
+        </mat-form-field>
     </div>
     <div class="details__item">
     <mat-form-field>
@@ -99,17 +107,6 @@
             <mat-option>None</mat-option>
             <mat-option *ngFor="let ganttchart of frontRepo.GanttCharts_array" [value]="ganttchart">
                 {{ganttchart.Name}}
-            </mat-option>
-        </mat-select>
-    </mat-form-field>
-</div>
-    <div class="details__item">
-    <mat-form-field>
-        <mat-label><- Dependencies</mat-label>
-        <mat-select [(ngModel)]="task.Task_Dependencies_reverse">
-            <mat-option>None</mat-option>
-            <mat-option *ngFor="let task of frontRepo.Tasks_array" [value]="task">
-                {{task.Name}}
             </mat-option>
         </mat-select>
     </mat-form-field>
