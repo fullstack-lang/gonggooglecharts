@@ -122,9 +122,14 @@ export class GanttchartComponent implements OnInit {
                 console.log("end " + end.getFullYear() + " " + end.getMonth() + " " + end.getDay())
 
                 ganttTargetChart.data.push(
-                  [task.Name, task.Name, null,
+                  [task.Name,
+                  task.Name,
+                  task.RessourceName,
                   new Date(start.getFullYear(), start.getMonth(), start.getDay()),
-                  new Date(end.getFullYear(), end.getMonth(), end.getDay()), daysToMilliseconds(3), 1, null]
+                  new Date(end.getFullYear(), end.getMonth(), end.getDay()),
+                  daysToMilliseconds(50),
+                  task.PercentComplete,
+                    null]
                 )
               }
             )
