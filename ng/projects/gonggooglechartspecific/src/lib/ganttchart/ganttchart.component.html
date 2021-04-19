@@ -1,5 +1,5 @@
 <mat-toolbar>
-    <span>Gannt chart {{lastCommitNb}}</span>
+    <span class="commit">Gantt chart {{lastCommitNb}}</span>
 </mat-toolbar>
 <div *ngFor="let chart of charts">
     <google-chart width="600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"

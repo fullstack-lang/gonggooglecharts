@@ -118,8 +118,7 @@ definitions:
     x-go-name: GanttChartAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   ganttchartDB:
-    description: 'It incorporates all fields : from the model, from the generated
-      field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -160,8 +159,7 @@ definitions:
     x-go-name: RessourceAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   ressourceDB:
-    description: 'It incorporates all fields : from the model, from the generated
-      field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -194,8 +192,7 @@ definitions:
       DependenciesID:
         $ref: '#/definitions/NullInt64'
       DependenciesName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       DisplayedName:
         type: string
@@ -226,8 +223,7 @@ definitions:
       RessourceID:
         $ref: '#/definitions/NullInt64'
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       Start:
         format: date-time
@@ -239,8 +235,7 @@ definitions:
     x-go-name: TaskAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   taskDB:
-    description: 'It incorporates all fields : from the model, from the generated
-      field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -253,8 +248,7 @@ definitions:
       DependenciesID:
         $ref: '#/definitions/NullInt64'
       DependenciesName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       DisplayedName:
         type: string
@@ -288,8 +282,7 @@ definitions:
       RessourceID:
         $ref: '#/definitions/NullInt64'
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       Start:
         format: date-time
@@ -660,18 +653,15 @@ responses:
           field Dependencies is a pointer to another Struct (optional or 0..1)
           This field is generated into another field to enable AS ONE association
       DependenciesName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       DisplayedName:
         type: string
       DisplayedName_Data:
-        description: Declation for basic field taskDB.DisplayedName {{BasicKind}}
-          (to be completed)
+        description: Declation for basic field taskDB.DisplayedName {{BasicKind}} (to be completed)
       Duration: {}
       Duration_Data:
-        description: Declation for basic field taskDB.Duration {{BasicKind}} (to be
-          completed)
+        description: Declation for basic field taskDB.Duration {{BasicKind}} (to be completed)
       End:
         format: date-time
         type: string
@@ -692,16 +682,14 @@ responses:
         format: double
         type: number
       PercentComplete_Data:
-        description: Declation for basic field taskDB.PercentComplete {{BasicKind}}
-          (to be completed)
+        description: Declation for basic field taskDB.PercentComplete {{BasicKind}} (to be completed)
       Ressource: {}
       RessourceID:
         description: |-
           field Ressource is a pointer to another Struct (optional or 0..1)
           This field is generated into another field to enable AS ONE association
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object
-          field
+        description: all gong Struct has a Name field, this enables this data to object field
         type: string
       Start:
         format: date-time
