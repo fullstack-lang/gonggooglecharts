@@ -34,7 +34,6 @@ class GoogleGanttTask {
   Duration: number;
   PercentComplete: number;
   Dependencies: string;
-
 }
 
 @Component({
@@ -145,7 +144,20 @@ export class GanttchartComponent implements OnInit {
                 googleGanttTask.End = new Date(end.getFullYear(), end.getMonth(), end.getDay())
                 googleGanttTask.Duration = daysToMilliseconds(0)
                 googleGanttTask.PercentComplete = task.PercentComplete
-                googleGanttTask.Dependencies = task.Dependencies?.Name
+                // googleGanttTask.Dependencies = task.Dependencies?.Name
+                let dependencies = ""
+                let index = 0
+                if ( task.Dependencies) {
+                  for (let dependency of task.Dependencies) {
+
+                    // dependencies are separated by ','
+                    if (index++ > 0) {
+                      dependencies += ','
+                    }
+                    dependencies += dependency.Name
+                  }  
+                }
+                googleGanttTask.Dependencies = dependencies
 
                 ganttTargetChart.data.push(
                   [googleGanttTask.Task_ID,

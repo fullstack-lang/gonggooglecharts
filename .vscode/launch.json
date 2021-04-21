@@ -5,11 +5,105 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "pwa-chrome",
+            "name": "Front on 4200",
+            "type": "chrome",
+            // "runtimeExecutable": "D:/MOSS-Users/peugeot/dev/tools/chrome/GoogleChromePortable64ll/Chrome.exe",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:4200",
+            "url": "http://localhost:4200/",
+            "webRoot": "${workspaceFolder}/ng",
+        },
+        {
+            "name": "Front on 8080",
+            "type": "chrome",
+            // "runtimeExecutable": "D:/MOSS-Users/peugeot/dev/tools/chrome/GoogleChromePortable64ll/Chrome.exe",
+            "request": "launch",
+            "url": "http://localhost:8080/",
+            "webRoot": "${workspaceFolder}/ng",
+        },
+        {
+            "name": "Front on local with 8080",
+            "runtimeArgs": [
+                "--remote-debugging-port=9222"
+            ],
+            "runtimeExecutable": "${env:CHROME_EXE}",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:8080/",
+            // the workspace folder is the .vscode ?
+            "webRoot": "${workspaceFolder}/ng",
+        },
+        {
+            "name": "Front on local with 4200",
+            "runtimeArgs": [
+                "--remote-debugging-port=9222"
+            ],
+            "runtimeExecutable": "${env:CHROME_EXE}",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:4200/",
+            // the workspace folder is the .vscode ?
+            "webRoot": "${workspaceFolder}/ng",
+        },
+        {
+            "name": "Attach chrome",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "url": "http://localhost:4200/",
             "webRoot": "${workspaceFolder}/ng"
-        }
+        },
+        {
+            "name": "go server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}",
+            "dlvLoadConfig": {
+                "followPointers": true,
+                "maxVariableRecurse": 1,
+                "maxStringLen": 300,
+                "maxArrayValues": 64,
+                "maxStructFields": -1
+            },
+            "args": [
+                // "-logGIN",
+                // "-client-control"
+            ]
+        },
+        {
+            "name": "go server with diagrams",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}",
+            "dlvLoadConfig": {
+                "followPointers": true,
+                "maxVariableRecurse": 1,
+                "maxStringLen": 300,
+                "maxArrayValues": 64,
+                "maxStructFields": -1
+            },
+            "args": [
+                // "-logGIN",
+            ]
+        },
+        {
+            "name": "go test",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/go/tests",
+            "env": {},
+            "dlvLoadConfig": {
+                "followPointers": true,
+                "maxVariableRecurse": 1,
+                "maxStringLen": 300,
+                "maxArrayValues": 64,
+                "maxStructFields": -1
+            },
+            "args": [
+                "-test.run",
+            ]
+        },
     ]
 }
