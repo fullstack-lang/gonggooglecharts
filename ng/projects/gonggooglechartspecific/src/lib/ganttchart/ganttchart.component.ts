@@ -126,13 +126,13 @@ export class GanttchartComponent implements OnInit {
             ganttChart.Tasks.forEach(
               task => {
 
-                console.log(task.Name + " start at " + task.Start)
+                console.log(task.Name + " start at " + task.Start + " with ressource " + task.Ressource?.Name)
 
                 let start = new Date(task.Start)
-                console.log("start " + start.getFullYear() + " " + start.getMonth() + " " + start.getDay())
+                // console.log("start " + start.getFullYear() + " " + start.getMonth() + " " + start.getDay())
 
                 let end = new Date(task.End)
-                console.log("end " + end.getFullYear() + " " + end.getMonth() + " " + end.getDay())
+                // console.log("end " + end.getFullYear() + " " + end.getMonth() + " " + end.getDay())
 
                 // see https://developers.google.com/chart/interactive/docs/gallery/ganttchart#data-format
 
@@ -140,7 +140,7 @@ export class GanttchartComponent implements OnInit {
 
                 googleGanttTask.Task_ID = task.Name
                 googleGanttTask.Task_Name = task.DisplayedName
-                googleGanttTask.Resource = task.RessourceName
+                googleGanttTask.Resource = task.Ressource?.Name
                 googleGanttTask.Start = new Date(start.getFullYear(), start.getMonth(), start.getDay())
                 googleGanttTask.End = new Date(end.getFullYear(), end.getMonth(), end.getDay())
                 googleGanttTask.Duration = daysToMilliseconds(0)
