@@ -1,9 +1,9 @@
-<mat-toolbar>
-    <span class="commit">Gantt chart {{lastCommitNb}}</span>
-</mat-toolbar>
 <div *ngFor="let chart of charts">
-    <google-chart width="600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
+    <google-chart width="600" height="600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
         [options]="chart.options" (ready)="onReady()" (select)="onSelect($event)" (error)="onError($event)"
         (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave($event)">
     </google-chart>
+</div>
+<div>
+    <p class="commit">Gantt chart {{lastCommitNb}}</p>
 </div>
