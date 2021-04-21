@@ -52,15 +52,11 @@ type TaskAPI struct {
 	// Declation for basic field taskDB.PercentComplete {{BasicKind}} (to be completed)
 	PercentComplete_Data sql.NullFloat64
 
-	// field Dependencies is a pointer to another Struct (optional or 0..1)
-	// This field is generated into another field to enable AS ONE association
-	DependenciesID sql.NullInt64
-
-	// all gong Struct has a Name field, this enables this data to object field
-	DependenciesName string
-
 	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
 	GanttChart_TasksDBID sql.NullInt64
+
+	// Implementation of a reverse ID for field Task{}.Dependencies []*Task
+	Task_DependenciesDBID sql.NullInt64
 
 	// end of insertion
 }
@@ -242,11 +238,16 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 				taskDB.PercentComplete_Data.Float64 = task.PercentComplete
 				taskDB.PercentComplete_Data.Valid = true
 
-				// commit pointer value task.Dependencies translates to updating the task.DependenciesID
-				taskDB.DependenciesID.Valid = true // allow for a 0 value (nil association)
-				if task.Dependencies != nil {
-					if DependenciesId, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task.Dependencies]; ok {
-						taskDB.DependenciesID.Int64 = int64(DependenciesId)
+				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
+				for _, task := range task.Dependencies {
+					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
+						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
+							taskDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
+							taskDB.Task_DependenciesDBID.Valid = true
+							if q := backRepoTask.db.Save(&taskDB); q.Error != nil {
+								return q.Error
+							}
+						}
 					}
 				}
 
@@ -346,9 +347,14 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseTwoInstance(backRepo *BackR
 
 			task.PercentComplete = taskDB.PercentComplete_Data.Float64
 
-			// Dependencies field
-			if taskDB.DependenciesID.Int64 != 0 {
-				task.Dependencies = (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[uint(taskDB.DependenciesID.Int64)]
+			// parse all TaskDB and redeem the array of poiners to Task
+			// first reset the slice
+			task.Dependencies = task.Dependencies[:0]
+			for _, TaskDB := range *backRepo.BackRepoTask.Map_TaskDBID_TaskDB {
+				if TaskDB.Task_DependenciesDBID.Int64 == int64(taskDB.ID) {
+					Task := (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[TaskDB.ID]
+					task.Dependencies = append(task.Dependencies, Task)
+				}
 			}
 
 		}

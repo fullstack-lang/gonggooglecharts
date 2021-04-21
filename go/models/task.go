@@ -10,5 +10,5 @@ type Task struct {
 	End             time.Time
 	Duration        time.Duration
 	PercentComplete float64
-	Dependencies    *Task // preceeding task (can be used to compute start time atomaticaly)
+	Dependencies    []*Task // preceeding tasks (can be used to compute start time atomaticaly)
 }
