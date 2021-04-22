@@ -169,6 +169,14 @@ export class GanttchartComponent implements OnInit {
                   googleGanttTask.PercentComplete,
                   googleGanttTask.Dependencies]
                 )
+
+                // specify that task have not to be ordered
+                ganttTargetChart.options = {
+                  gantt: {
+                    sortTasks: false,
+                    
+                  },
+                }
               }
             )
 
