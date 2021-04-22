@@ -103,6 +103,7 @@ export class GanttchartComponent implements OnInit {
       gonggooglechartsFrontRepo => {
         this.gonggooglechartFrontRepo = gonggooglechartsFrontRepo
 
+
         this.gonggooglechartFrontRepo.GanttCharts_array.forEach(
           ganttChart => {
             let ganttTargetChart = new GoogleGanttChart()
@@ -122,7 +123,24 @@ export class GanttchartComponent implements OnInit {
               //   ['Research', 'Identify a gant js framework', null,
               //     new Date(2015, 0, 1), new Date(2015, 0, 30), daysToMilliseconds(3), 1, null],
             ]
-            ganttChart.Tasks.forEach(
+
+
+            let taskList = new Array<gonggooglechart.TaskDB>()
+            taskList = ganttChart.Tasks
+
+            var sortedTaskList: gonggooglechart.TaskDB[] = taskList.sort((t1, t2) => {
+              if (t1.Rank > t2.Rank) {
+                return 1;
+              }
+    
+              if (t1.Rank < t2.Rank) {
+                return -1;
+              }
+    
+              return 0;
+            });
+
+            sortedTaskList.forEach(
               task => {
 
                 console.log(task.Name + " start at " + task.Start + " with ressource " + task.Ressource?.Name)
@@ -147,7 +165,7 @@ export class GanttchartComponent implements OnInit {
                 // googleGanttTask.Dependencies = task.Dependencies?.Name
                 let dependencies = ""
                 let index = 0
-                if ( task.Dependencies) {
+                if (task.Dependencies) {
                   for (let dependency of task.Dependencies) {
 
                     // dependencies are separated by ','
@@ -155,7 +173,7 @@ export class GanttchartComponent implements OnInit {
                       dependencies += ','
                     }
                     dependencies += dependency.Task?.Name
-                  }  
+                  }
                 }
                 googleGanttTask.Dependencies = dependencies
 
@@ -174,7 +192,7 @@ export class GanttchartComponent implements OnInit {
                 ganttTargetChart.options = {
                   gantt: {
                     sortTasks: false,
-                    
+
                   },
                 }
               }
