@@ -11,6 +11,8 @@ github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210421131156-085663d516d1
 github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210421131156-085663d516d1/go.mod h1:fMmC8lxeTCYBO0EiG+koA1ZekMsXoTI24vx9APeBQb8=
 github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210422055412-5e8b99fb7946 h1:X5/FlegVaRFeS4BJJ9SUGLAfiEIra6Q2qgtW/RSSAYk=
 github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210422055412-5e8b99fb7946/go.mod h1:fMmC8lxeTCYBO0EiG+koA1ZekMsXoTI24vx9APeBQb8=
+github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210422081809-a55e24fa4d8b h1:pT6XoJyDAvt44fQ+mM0FIjQwm+OZuV2+uGzNG3oEfdI=
+github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210422081809-a55e24fa4d8b/go.mod h1:fMmC8lxeTCYBO0EiG+koA1ZekMsXoTI24vx9APeBQb8=
 github.com/gin-contrib/cors v1.3.1 h1:doAsuITavI4IOcd0Y19U4B+O0dNWihRyX//nn4sEmgA=
 github.com/gin-contrib/cors v1.3.1/go.mod h1:jjEJ4268OPZUcU7k9Pm653S7lXUGcqMADzFA61xsmDk=
 github.com/gin-contrib/sse v0.1.0 h1:Y/yl/+YNO8GZSjAhjMsSuLt29uWRFHdHYUb5lYOV9qE=

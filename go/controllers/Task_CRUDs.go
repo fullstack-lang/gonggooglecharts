@@ -88,6 +88,10 @@ func GetTasks(c *gin.Context) {
 			task.PercentComplete = task.PercentComplete_Data.Float64
 		}
 
+		if task.Rank_Data.Valid {
+			task.Rank = int(task.Rank_Data.Int64)
+		}
+
 	}
 
 	c.JSON(http.StatusOK, tasks)
@@ -142,6 +146,9 @@ func PostTask(c *gin.Context) {
 
 	taskDB.PercentComplete_Data.Float64 = input.PercentComplete
 	taskDB.PercentComplete_Data.Valid = true
+
+	taskDB.Rank_Data.Int64 = int64(input.Rank)
+	taskDB.Rank_Data.Valid = true
 
 	query := db.Create(&taskDB)
 	if query.Error != nil {
@@ -206,6 +213,10 @@ func GetTask(c *gin.Context) {
 		task.PercentComplete = task.PercentComplete_Data.Float64
 	}
 
+	if task.Rank_Data.Valid {
+		task.Rank = int(task.Rank_Data.Int64)
+	}
+
 	c.JSON(http.StatusOK, task)
 }
 
@@ -261,6 +272,9 @@ func UpdateTask(c *gin.Context) {
 
 	input.PercentComplete_Data.Float64 = input.PercentComplete
 	input.PercentComplete_Data.Valid = true
+
+	input.Rank_Data.Int64 = int64(input.Rank)
+	input.Rank_Data.Valid = true
 
 	query = db.Model(&taskDB).Updates(input)
 	if query.Error != nil {

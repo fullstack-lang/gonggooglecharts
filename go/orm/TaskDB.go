@@ -52,6 +52,9 @@ type TaskAPI struct {
 	// Declation for basic field taskDB.PercentComplete {{BasicKind}} (to be completed)
 	PercentComplete_Data sql.NullFloat64
 
+	// Declation for basic field taskDB.Rank {{BasicKind}} (to be completed)
+	Rank_Data sql.NullInt64
+
 	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
 	GanttChart_TasksDBID sql.NullInt64
 
@@ -248,6 +251,9 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 					}
 				}
 
+				taskDB.Rank_Data.Int64 = int64(task.Rank)
+				taskDB.Rank_Data.Valid = true
+
 			}
 		}
 		query := backRepoTask.db.Save(&taskDB)
@@ -353,6 +359,8 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseTwoInstance(backRepo *BackR
 					task.Dependencies = append(task.Dependencies, Dependency)
 				}
 			}
+
+			task.Rank = int(taskDB.Rank_Data.Int64)
 
 		}
 	}

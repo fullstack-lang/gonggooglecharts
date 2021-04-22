@@ -12,4 +12,5 @@ type Task struct {
 	Duration        time.Duration
 	PercentComplete float64
 	Dependencies    []*Dependency // preceeding tasks (can be used to compute start time atomaticaly)
+	Rank            int           // Task are displayed according to their Rank
 }
