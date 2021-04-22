@@ -12,6 +12,8 @@ var __member __void
 // StageStruct enables storage of staged instances
 // swagger:ignore
 type StageStruct struct { // insertion point for definition of arrays registering instances
+	Dependencys map[*Dependency]struct{}
+
 	GanttCharts map[*GanttChart]struct{}
 
 	Ressources map[*Ressource]struct{}
@@ -29,6 +31,8 @@ type BackRepoInterface interface {
 	Commit(stage *StageStruct)
 	Checkout(stage *StageStruct)
 	// insertion point for Commit and Checkout signatures
+	CommitDependency(dependency *Dependency)
+	CheckoutDependency(dependency *Dependency)
 	CommitGanttChart(ganttchart *GanttChart)
 	CheckoutGanttChart(ganttchart *GanttChart)
 	CommitRessource(ressource *Ressource)
@@ -40,6 +44,8 @@ type BackRepoInterface interface {
 
 // swagger:ignore instructs the gong compiler (gongc) to avoid this particular struct
 var Stage StageStruct = StageStruct{ // insertion point for array initiatialisation
+	Dependencys: make(map[*Dependency]struct{}, 0),
+
 	GanttCharts: make(map[*GanttChart]struct{}, 0),
 
 	Ressources: make(map[*Ressource]struct{}, 0),
@@ -61,6 +67,105 @@ func (stage *StageStruct) Checkout() {
 }
 
 // insertion point for cumulative sub template with model space calls
+func (stage *StageStruct) getDependencyOrderedStructWithNameField() []*Dependency {
+	// have alphabetical order generation
+	dependencyOrdered := []*Dependency{}
+	for dependency := range stage.Dependencys {
+		dependencyOrdered = append(dependencyOrdered, dependency)
+	}
+	sort.Slice(dependencyOrdered[:], func(i, j int) bool {
+		return dependencyOrdered[i].Name < dependencyOrdered[j].Name
+	})
+	return dependencyOrdered
+}
+
+// Stage puts dependency to the model stage
+func (dependency *Dependency) Stage() *Dependency {
+	Stage.Dependencys[dependency] = __member
+	return dependency
+}
+
+// Unstage removes dependency off the model stage
+func (dependency *Dependency) Unstage() *Dependency {
+	delete(Stage.Dependencys, dependency)
+	return dependency
+}
+
+// commit dependency to the back repo (if it is already staged)
+func (dependency *Dependency) Commit() *Dependency {
+	if _, ok := Stage.Dependencys[dependency]; ok {
+		if Stage.BackRepo != nil {
+			Stage.BackRepo.CommitDependency(dependency)
+		}
+	}
+	return dependency
+}
+
+// Checkout dependency to the back repo (if it is already staged)
+func (dependency *Dependency) Checkout() *Dependency {
+	if _, ok := Stage.Dependencys[dependency]; ok {
+		if Stage.BackRepo != nil {
+			Stage.BackRepo.CheckoutDependency(dependency)
+		}
+	}
+	return dependency
+}
+
+//
+// Legacy, to be deleted
+//
+
+// StageCopy appends a copy of dependency to the model stage
+func (dependency *Dependency) StageCopy() *Dependency {
+	_dependency := new(Dependency)
+	*_dependency = *dependency
+	_dependency.Stage()
+	return _dependency
+}
+
+// StageAndCommit appends dependency to the model stage and commit to the orm repo
+func (dependency *Dependency) StageAndCommit() *Dependency {
+	dependency.Stage()
+	if Stage.AllModelsStructCreateCallback != nil {
+		Stage.AllModelsStructCreateCallback.CreateORMDependency(dependency)
+	}
+	return dependency
+}
+
+// DeleteStageAndCommit appends dependency to the model stage and commit to the orm repo
+func (dependency *Dependency) DeleteStageAndCommit() *Dependency {
+	dependency.Unstage()
+	DeleteORMDependency(dependency)
+	return dependency
+}
+
+// StageCopyAndCommit appends a copy of dependency to the model stage and commit to the orm repo
+func (dependency *Dependency) StageCopyAndCommit() *Dependency {
+	_dependency := new(Dependency)
+	*_dependency = *dependency
+	_dependency.Stage()
+	if Stage.AllModelsStructCreateCallback != nil {
+		Stage.AllModelsStructCreateCallback.CreateORMDependency(dependency)
+	}
+	return _dependency
+}
+
+// CreateORMDependency enables dynamic staging of a Dependency instance
+func CreateORMDependency(dependency *Dependency) {
+	dependency.Stage()
+	if Stage.AllModelsStructCreateCallback != nil {
+		Stage.AllModelsStructCreateCallback.CreateORMDependency(dependency)
+	}
+}
+
+// DeleteORMDependency enables dynamic staging of a Dependency instance
+func DeleteORMDependency(dependency *Dependency) {
+	dependency.Unstage()
+	if Stage.AllModelsStructDeleteCallback != nil {
+		Stage.AllModelsStructDeleteCallback.DeleteORMDependency(dependency)
+	}
+}
+
 func (stage *StageStruct) getGanttChartOrderedStructWithNameField() []*GanttChart {
 	// have alphabetical order generation
 	ganttchartOrdered := []*GanttChart{}
@@ -360,24 +465,28 @@ func DeleteORMTask(task *Task) {
 
 // swagger:ignore
 type AllModelsStructCreateInterface interface { // insertion point for Callbacks on creation
+	CreateORMDependency(Dependency *Dependency)
 	CreateORMGanttChart(GanttChart *GanttChart)
 	CreateORMRessource(Ressource *Ressource)
 	CreateORMTask(Task *Task)
 }
 
 type AllModelsStructDeleteInterface interface { // insertion point for Callbacks on deletion
+	DeleteORMDependency(Dependency *Dependency)
 	DeleteORMGanttChart(GanttChart *GanttChart)
 	DeleteORMRessource(Ressource *Ressource)
 	DeleteORMTask(Task *Task)
 }
 
 func (stage *StageStruct) Reset() { // insertion point for array reset
+	stage.Dependencys = make(map[*Dependency]struct{}, 0)
 	stage.GanttCharts = make(map[*GanttChart]struct{}, 0)
 	stage.Ressources = make(map[*Ressource]struct{}, 0)
 	stage.Tasks = make(map[*Task]struct{}, 0)
 }
 
 func (stage *StageStruct) Nil() { // insertion point for array nil
+	stage.Dependencys = nil
 	stage.GanttCharts = nil
 	stage.Ressources = nil
 	stage.Tasks = nil

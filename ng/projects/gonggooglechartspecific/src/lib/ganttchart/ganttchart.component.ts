@@ -151,10 +151,10 @@ export class GanttchartComponent implements OnInit {
                   for (let dependency of task.Dependencies) {
 
                     // dependencies are separated by ','
-                    if (index++ > 0) {
+                    if (index++ > 0 && dependency.Task) {
                       dependencies += ','
                     }
-                    dependencies += dependency.Name
+                    dependencies += dependency.Task?.Name
                   }  
                 }
                 googleGanttTask.Dependencies = dependencies

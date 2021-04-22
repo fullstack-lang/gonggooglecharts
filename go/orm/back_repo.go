@@ -9,6 +9,8 @@ import (
 // BackRepoStruct supports callback functions
 type BackRepoStruct struct {
 	// insertion point for per struct back repo declarations
+	BackRepoDependency BackRepoDependencyStruct
+
 	BackRepoGanttChart BackRepoGanttChartStruct
 
 	BackRepoRessource BackRepoRessourceStruct
@@ -30,6 +32,7 @@ func (backRepo *BackRepoStruct) IncrementCommitNb() uint {
 // Init the BackRepoStruct inner variables and link to the database
 func (backRepo *BackRepoStruct) Init(db *gorm.DB) {
 	// insertion point for per struct back repo declarations
+	backRepo.BackRepoDependency.Init(db)
 	backRepo.BackRepoGanttChart.Init(db)
 	backRepo.BackRepoRessource.Init(db)
 	backRepo.BackRepoTask.Init(db)
@@ -40,11 +43,13 @@ func (backRepo *BackRepoStruct) Init(db *gorm.DB) {
 // Commit the BackRepoStruct inner variables and link to the database
 func (backRepo *BackRepoStruct) Commit(stage *models.StageStruct) {
 	// insertion point for per struct back repo phase one commit
+	backRepo.BackRepoDependency.CommitPhaseOne(stage)
 	backRepo.BackRepoGanttChart.CommitPhaseOne(stage)
 	backRepo.BackRepoRessource.CommitPhaseOne(stage)
 	backRepo.BackRepoTask.CommitPhaseOne(stage)
 
 	// insertion point for per struct back repo phase two commit
+	backRepo.BackRepoDependency.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoGanttChart.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CommitPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CommitPhaseTwo(backRepo)
@@ -55,11 +60,13 @@ func (backRepo *BackRepoStruct) Commit(stage *models.StageStruct) {
 // Checkout the database into the stage
 func (backRepo *BackRepoStruct) Checkout(stage *models.StageStruct) {
 	// insertion point for per struct back repo phase one commit
+	backRepo.BackRepoDependency.CheckoutPhaseOne()
 	backRepo.BackRepoGanttChart.CheckoutPhaseOne()
 	backRepo.BackRepoRessource.CheckoutPhaseOne()
 	backRepo.BackRepoTask.CheckoutPhaseOne()
 
 	// insertion point for per struct back repo phase two commit
+	backRepo.BackRepoDependency.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoGanttChart.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoRessource.CheckoutPhaseTwo(backRepo)
 	backRepo.BackRepoTask.CheckoutPhaseTwo(backRepo)

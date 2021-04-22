@@ -45,5 +45,12 @@
 			],
 			"group": "build"
 		},
+		{
+            // you can check in go.mod, the timestamp is UTC
+            "label": "00 - go get -u ./...; go mod tidy",
+            "type": "shell",
+            "group": "build",
+            "command": "go get -u ./...; go mod tidy"
+        },
 	]
 }

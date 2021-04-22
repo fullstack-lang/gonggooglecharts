@@ -12,6 +12,13 @@ export * from './lib/front-repo.service'
 export * from './lib/commitnb.service'
 
 
+export * from './lib/dependency-detail/dependency-detail.component'
+export * from './lib/dependency-presentation/dependency-presentation.component'
+export * from './lib/dependencys-table/dependencys-table.component'
+export * from './lib/dependency-db'
+export * from './lib/dependency-api'
+export * from './lib/dependency.service'
+
 export * from './lib/ganttchart-detail/ganttchart-detail.component'
 export * from './lib/ganttchart-presentation/ganttchart-presentation.component'
 export * from './lib/ganttcharts-table/ganttcharts-table.component'

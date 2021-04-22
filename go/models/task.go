@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// swagger:model Task
 type Task struct {
 	Name            string
 	DisplayedName   string
@@ -10,5 +11,5 @@ type Task struct {
 	End             time.Time
 	Duration        time.Duration
 	PercentComplete float64
-	Dependencies    []*Task // preceeding tasks (can be used to compute start time atomaticaly)
+	Dependencies    []*Dependency // preceeding tasks (can be used to compute start time atomaticaly)
 }

@@ -55,9 +55,6 @@ type TaskAPI struct {
 	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
 	GanttChart_TasksDBID sql.NullInt64
 
-	// Implementation of a reverse ID for field Task{}.Dependencies []*Task
-	Task_DependenciesDBID sql.NullInt64
-
 	// end of insertion
 }
 
@@ -238,13 +235,13 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 				taskDB.PercentComplete_Data.Float64 = task.PercentComplete
 				taskDB.PercentComplete_Data.Valid = true
 
-				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
-				for _, task := range task.Dependencies {
-					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
-						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
-							taskDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
-							taskDB.Task_DependenciesDBID.Valid = true
-							if q := backRepoTask.db.Save(&taskDB); q.Error != nil {
+				// commit a slice of pointer translates to update reverse pointer to Dependency, i.e.
+				for _, dependency := range task.Dependencies {
+					if dependencyDBID, ok := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]; ok {
+						if dependencyDB, ok := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDBID]; ok {
+							dependencyDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
+							dependencyDB.Task_DependenciesDBID.Valid = true
+							if q := backRepoTask.db.Save(&dependencyDB); q.Error != nil {
 								return q.Error
 							}
 						}
@@ -347,13 +344,13 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseTwoInstance(backRepo *BackR
 
 			task.PercentComplete = taskDB.PercentComplete_Data.Float64
 
-			// parse all TaskDB and redeem the array of poiners to Task
+			// parse all DependencyDB and redeem the array of poiners to Task
 			// first reset the slice
 			task.Dependencies = task.Dependencies[:0]
-			for _, TaskDB := range *backRepo.BackRepoTask.Map_TaskDBID_TaskDB {
-				if TaskDB.Task_DependenciesDBID.Int64 == int64(taskDB.ID) {
-					Task := (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[TaskDB.ID]
-					task.Dependencies = append(task.Dependencies, Task)
+			for _, DependencyDB := range *backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB {
+				if DependencyDB.Task_DependenciesDBID.Int64 == int64(taskDB.ID) {
+					Dependency := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyPtr)[DependencyDB.ID]
+					task.Dependencies = append(task.Dependencies, Dependency)
 				}
 			}
 
