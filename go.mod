@@ -3,12 +3,12 @@ module github.com/fullstack-lang/gonggooglecharts
 go 1.16
 
 require (
-	github.com/fullstack-lang/gonggooglecharts/go v0.0.0-20210422085251-4c6999acd8e7
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.7.1
 	github.com/go-playground/validator/v10 v10.5.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/jinzhu/gorm v1.9.16
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/mattn/go-sqlite3 v1.14.7 // indirect
