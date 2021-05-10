@@ -1,5 +1,5 @@
 <div *ngFor="let chart of charts">
-    <google-chart width="1200" height="2600" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
+    <google-chart width="1200" height="18000" [title]="chart.title" [type]="chart.type" [data]="chart.data" [columns]="chart.columns"
         [options]="chart.options" (ready)="onReady()" (select)="onSelect($event)" (error)="onError($event)"
         (mouseenter)="onMouseEnter($event)" (mouseleave)="onMouseLeave($event)">
     </google-chart>

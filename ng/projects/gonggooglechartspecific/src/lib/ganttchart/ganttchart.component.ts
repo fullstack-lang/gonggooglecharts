@@ -43,6 +43,7 @@ class GoogleGanttTask {
 })
 export class GanttchartComponent implements OnInit {
 
+  height: number
 
   /**
  * the component is refreshed when modification are performed in the back repo 
@@ -103,6 +104,7 @@ export class GanttchartComponent implements OnInit {
       gonggooglechartsFrontRepo => {
         this.gonggooglechartFrontRepo = gonggooglechartsFrontRepo
 
+        this.height = 40
 
         this.gonggooglechartFrontRepo.GanttCharts_array.forEach(
           ganttChart => {
@@ -140,10 +142,13 @@ export class GanttchartComponent implements OnInit {
               return 0;
             });
 
+            this.height = this.height + sortedTaskList.length * 20
+            console.log("height " + this.height)
+
             sortedTaskList.forEach(
               task => {
 
-                console.log(task.Name + " start at " + task.Start + " with ressource " + task.Ressource?.Name)
+                // console.log(task.Name + " start at " + task.Start + " with ressource " + task.Ressource?.Name)
 
                 let start = new Date(task.Start)
                 // console.log("start " + start.getFullYear() + " " + start.getMonth() + " " + start.getDay())
