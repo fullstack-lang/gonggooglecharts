@@ -6,15 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
+
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
-// dummy variable to have the import database/sql wihthout compile failure id no sql is used
+// dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
 var dummy_Dependency sql.NullBool
 var __Dependency_time__dummyDeclaration time.Duration
+var dummy_Dependency_sort sort.Float64Slice
 
 // DependencyAPI is the input in POST API
 //
@@ -39,6 +42,7 @@ type DependencyAPI struct {
 
 	// Implementation of a reverse ID for field Task{}.Dependencies []*Dependency
 	Task_DependenciesDBID sql.NullInt64
+	Task_DependenciesDBID_Index sql.NullInt64
 
 	// end of insertion
 }

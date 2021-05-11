@@ -126,6 +126,8 @@ definitions:
         $ref: '#/definitions/Task'
       Task_DependenciesDBID:
         $ref: '#/definitions/NullInt64'
+      Task_DependenciesDBID_Index:
+        $ref: '#/definitions/NullInt64'
       TaskID:
         $ref: '#/definitions/NullInt64'
       TaskName:
@@ -154,6 +156,8 @@ definitions:
       Task:
         $ref: '#/definitions/Task'
       Task_DependenciesDBID:
+        $ref: '#/definitions/NullInt64'
+      Task_DependenciesDBID_Index:
         $ref: '#/definitions/NullInt64'
       TaskID:
         $ref: '#/definitions/NullInt64'
@@ -274,6 +278,8 @@ definitions:
         $ref: '#/definitions/NullTime'
       GanttChart_TasksDBID:
         $ref: '#/definitions/NullInt64'
+      GanttChart_TasksDBID_Index:
+        $ref: '#/definitions/NullInt64'
       Name:
         type: string
       Name_Data:
@@ -331,6 +337,8 @@ definitions:
       End_Data:
         $ref: '#/definitions/NullTime'
       GanttChart_TasksDBID:
+        $ref: '#/definitions/NullInt64'
+      GanttChart_TasksDBID_Index:
         $ref: '#/definitions/NullInt64'
       ID:
         format: uint64
@@ -739,6 +747,7 @@ responses:
       Task: {}
       Task_DependenciesDBID:
         description: Implementation of a reverse ID for field Task{}.Dependencies []*Dependency
+      Task_DependenciesDBID_Index: {}
       TaskID:
         description: |-
           field Task is a pointer to another Struct (optional or 0..1)
@@ -860,6 +869,7 @@ responses:
         description: Declation for basic field taskDB.End
       GanttChart_TasksDBID:
         description: Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
+      GanttChart_TasksDBID_Index: {}
       ID:
         format: uint64
         type: integer

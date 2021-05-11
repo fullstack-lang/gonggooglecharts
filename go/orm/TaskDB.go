@@ -6,15 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
+
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
-// dummy variable to have the import database/sql wihthout compile failure id no sql is used
+// dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
 var dummy_Task sql.NullBool
 var __Task_time__dummyDeclaration time.Duration
+var dummy_Task_sort sort.Float64Slice
 
 // TaskAPI is the input in POST API
 //
@@ -57,6 +60,7 @@ type TaskAPI struct {
 
 	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
 	GanttChart_TasksDBID sql.NullInt64
+	GanttChart_TasksDBID_Index sql.NullInt64
 
 	// end of insertion
 }
@@ -240,10 +244,14 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 
 				// commit a slice of pointer translates to update reverse pointer to Dependency, i.e.
 				for _, dependency := range task.Dependencies {
+					index := 0
 					if dependencyDBID, ok := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]; ok {
 						if dependencyDB, ok := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDBID]; ok {
 							dependencyDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
 							dependencyDB.Task_DependenciesDBID.Valid = true
+							dependencyDB.Task_DependenciesDBID_Index.Int64 = int64(index)
+							index = index + 1
+							dependencyDB.Task_DependenciesDBID_Index.Valid = true
 							if q := backRepoTask.db.Save(&dependencyDB); q.Error != nil {
 								return q.Error
 							}
@@ -359,6 +367,17 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseTwoInstance(backRepo *BackR
 					task.Dependencies = append(task.Dependencies, Dependency)
 				}
 			}
+			
+			// sort the array according to the order
+			sort.Slice(task.Dependencies, func(i, j int) bool {
+				dependencyDB_i_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[i]]
+				dependencyDB_j_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[j]]
+
+				dependencyDB_i := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_i_ID]
+				dependencyDB_j := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_j_ID]
+
+				return dependencyDB_i.Task_DependenciesDBID_Index.Int64 < dependencyDB_j.Task_DependenciesDBID_Index.Int64
+			})
 
 			task.Rank = int(taskDB.Rank_Data.Int64)
 

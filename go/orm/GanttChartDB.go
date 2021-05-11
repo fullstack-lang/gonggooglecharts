@@ -6,15 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
+
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
-// dummy variable to have the import database/sql wihthout compile failure id no sql is used
+// dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
 var dummy_GanttChart sql.NullBool
 var __GanttChart_time__dummyDeclaration time.Duration
+var dummy_GanttChart_sort sort.Float64Slice
 
 // GanttChartAPI is the input in POST API
 //
@@ -189,10 +192,14 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseTwoInstance(backR
 
 				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
 				for _, task := range ganttchart.Tasks {
+					index := 0
 					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
 						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
 							taskDB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
 							taskDB.GanttChart_TasksDBID.Valid = true
+							taskDB.GanttChart_TasksDBID_Index.Int64 = int64(index)
+							index = index + 1
+							taskDB.GanttChart_TasksDBID_Index.Valid = true
 							if q := backRepoGanttChart.db.Save(&taskDB); q.Error != nil {
 								return q.Error
 							}
@@ -290,6 +297,17 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseTwoInstance(bac
 					ganttchart.Tasks = append(ganttchart.Tasks, Task)
 				}
 			}
+			
+			// sort the array according to the order
+			sort.Slice(ganttchart.Tasks, func(i, j int) bool {
+				taskDB_i_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[i]]
+				taskDB_j_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[j]]
+
+				taskDB_i := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_i_ID]
+				taskDB_j := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_j_ID]
+
+				return taskDB_i.GanttChart_TasksDBID_Index.Int64 < taskDB_j.GanttChart_TasksDBID_Index.Int64
+			})
 
 		}
 	}
