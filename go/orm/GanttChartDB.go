@@ -191,14 +191,14 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseTwoInstance(backR
 				ganttchartDB.Name_Data.Valid = true
 
 				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
+				index_Tasks := 0
 				for _, task := range ganttchart.Tasks {
-					index := 0
 					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
 						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
 							taskDB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
 							taskDB.GanttChart_TasksDBID.Valid = true
-							taskDB.GanttChart_TasksDBID_Index.Int64 = int64(index)
-							index = index + 1
+							taskDB.GanttChart_TasksDBID_Index.Int64 = int64(index_Tasks)
+							index_Tasks = index_Tasks + 1
 							taskDB.GanttChart_TasksDBID_Index.Valid = true
 							if q := backRepoGanttChart.db.Save(&taskDB); q.Error != nil {
 								return q.Error

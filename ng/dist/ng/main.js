@@ -343,11 +343,6 @@ class DependencysTableComponent {
         this.dialogData = dialogData;
         this.router = router;
         this.initialSelection = new Array();
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
         // observable for changes in structs
         this.dependencyService.DependencyServiceChanged.subscribe(message => {
             if (message == "post" || message == "update" || message == "delete") {
@@ -556,7 +551,7 @@ DependencysTableComponent.ɵcmp = _angular_core__WEBPACK_IMPORTED_MODULE_5__["ɵ
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! D:\MOSS-Users\peugeot\go\src\github.com\fullstack-lang\gonggooglecharts\ng\src\main.ts */"zUnb");
+module.exports = __webpack_require__(/*! /Users/thomaspeugeot/go/src/github.com/fullstack-lang/gonggooglecharts/ng/src/main.ts */"zUnb");
 
 
 /***/ }),
@@ -1820,11 +1815,6 @@ class RessourceDetailComponent {
         this.dialog = dialog;
         this.route = route;
         this.router = router;
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
     }
     ngOnInit() {
         this.getRessource();
@@ -2218,11 +2208,6 @@ class GanttChartDetailComponent {
         this.dialog = dialog;
         this.route = route;
         this.router = router;
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
     }
     ngOnInit() {
         this.getGanttChart();
@@ -4055,11 +4040,6 @@ class RessourcesTableComponent {
         this.dialogData = dialogData;
         this.router = router;
         this.initialSelection = new Array();
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
         // observable for changes in structs
         this.ressourceService.RessourceServiceChanged.subscribe(message => {
             if (message == "post" || message == "update" || message == "delete") {
@@ -4541,11 +4521,6 @@ class TaskDetailComponent {
         this.dialog = dialog;
         this.route = route;
         this.router = router;
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
     }
     ngOnInit() {
         this.getTask();
@@ -4975,11 +4950,6 @@ class DependencyDetailComponent {
         this.dialog = dialog;
         this.route = route;
         this.router = router;
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
     }
     ngOnInit() {
         this.getDependency();
@@ -5426,11 +5396,6 @@ class GanttChartsTableComponent {
         this.dialogData = dialogData;
         this.router = router;
         this.initialSelection = new Array();
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
         // observable for changes in structs
         this.ganttchartService.GanttChartServiceChanged.subscribe(message => {
             if (message == "post" || message == "update" || message == "delete") {
@@ -6040,11 +6005,6 @@ class TasksTableComponent {
         this.dialogData = dialogData;
         this.router = router;
         this.initialSelection = new Array();
-        // https://stackoverflow.com/questions/54627478/angular-7-routing-to-same-component-but-different-param-not-working
-        // this is for routerLink on same component when only queryParameter changes
-        this.router.routeReuseStrategy.shouldReuseRoute = function () {
-            return false;
-        };
         // observable for changes in structs
         this.taskService.TaskServiceChanged.subscribe(message => {
             if (message == "post" || message == "update" || message == "delete") {

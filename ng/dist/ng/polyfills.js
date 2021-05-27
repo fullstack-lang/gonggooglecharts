@@ -7,7 +7,7 @@
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-module.exports = __webpack_require__(/*! D:\MOSS-Users\peugeot\go\src\github.com\fullstack-lang\gonggooglecharts\ng\src\polyfills.ts */"hN/g");
+module.exports = __webpack_require__(/*! /Users/thomaspeugeot/go/src/github.com/fullstack-lang/gonggooglecharts/ng/src/polyfills.ts */"hN/g");
 
 
 /***/ }),

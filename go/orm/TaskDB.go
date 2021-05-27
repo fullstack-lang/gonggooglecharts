@@ -243,14 +243,14 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 				taskDB.PercentComplete_Data.Valid = true
 
 				// commit a slice of pointer translates to update reverse pointer to Dependency, i.e.
+				index_Dependencies := 0
 				for _, dependency := range task.Dependencies {
-					index := 0
 					if dependencyDBID, ok := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]; ok {
 						if dependencyDB, ok := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDBID]; ok {
 							dependencyDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
 							dependencyDB.Task_DependenciesDBID.Valid = true
-							dependencyDB.Task_DependenciesDBID_Index.Int64 = int64(index)
-							index = index + 1
+							dependencyDB.Task_DependenciesDBID_Index.Int64 = int64(index_Dependencies)
+							index_Dependencies = index_Dependencies + 1
 							dependencyDB.Task_DependenciesDBID_Index.Valid = true
 							if q := backRepoTask.db.Save(&dependencyDB); q.Error != nil {
 								return q.Error

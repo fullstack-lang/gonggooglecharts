@@ -131,14 +131,16 @@ definitions:
       TaskID:
         $ref: '#/definitions/NullInt64'
       TaskName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
     title: DependencyAPI is the input in POST API
     type: object
     x-go-name: DependencyAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   dependencyDB:
-    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -162,7 +164,8 @@ definitions:
       TaskID:
         $ref: '#/definitions/NullInt64'
       TaskName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
       UpdatedAt:
         format: date-time
@@ -190,7 +193,8 @@ definitions:
     x-go-name: GanttChartAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   ganttchartDB:
-    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -231,7 +235,8 @@ definitions:
     x-go-name: RessourceAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   ressourceDB:
-    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -299,7 +304,8 @@ definitions:
       RessourceID:
         $ref: '#/definitions/NullInt64'
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
       Start:
         format: date-time
@@ -311,7 +317,8 @@ definitions:
     x-go-name: TaskAPI
     x-go-package: github.com/fullstack-lang/gonggooglecharts/go/orm
   taskDB:
-    description: 'It incorporates all fields : from the model, from the generated field for the API and the GORM ID'
+    description: 'It incorporates all fields : from the model, from the generated
+      field for the API and the GORM ID'
     properties:
       CreatedAt:
         format: date-time
@@ -362,7 +369,8 @@ definitions:
       RessourceID:
         $ref: '#/definitions/NullInt64'
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
       Start:
         format: date-time
@@ -746,14 +754,16 @@ responses:
           Declation for basic field dependencyDB.Name {{BasicKind}} (to be completed)
       Task: {}
       Task_DependenciesDBID:
-        description: Implementation of a reverse ID for field Task{}.Dependencies []*Dependency
+        description: Implementation of a reverse ID for field Task{}.Dependencies
+          []*Dependency
       Task_DependenciesDBID_Index: {}
       TaskID:
         description: |-
           field Task is a pointer to another Struct (optional or 0..1)
           This field is generated into another field to enable AS ONE association
       TaskName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
       UpdatedAt:
         format: date-time
@@ -858,10 +868,12 @@ responses:
       DisplayedName:
         type: string
       DisplayedName_Data:
-        description: Declation for basic field taskDB.DisplayedName {{BasicKind}} (to be completed)
+        description: Declation for basic field taskDB.DisplayedName {{BasicKind}}
+          (to be completed)
       Duration: {}
       Duration_Data:
-        description: Declation for basic field taskDB.Duration {{BasicKind}} (to be completed)
+        description: Declation for basic field taskDB.Duration {{BasicKind}} (to be
+          completed)
       End:
         format: date-time
         type: string
@@ -883,7 +895,8 @@ responses:
         format: double
         type: number
       PercentComplete_Data:
-        description: Declation for basic field taskDB.PercentComplete {{BasicKind}} (to be completed)
+        description: Declation for basic field taskDB.PercentComplete {{BasicKind}}
+          (to be completed)
       Rank:
         format: int64
         type: integer
@@ -895,7 +908,8 @@ responses:
           field Ressource is a pointer to another Struct (optional or 0..1)
           This field is generated into another field to enable AS ONE association
       RessourceName:
-        description: all gong Struct has a Name field, this enables this data to object field
+        description: all gong Struct has a Name field, this enables this data to object
+          field
         type: string
       Start:
         format: date-time
