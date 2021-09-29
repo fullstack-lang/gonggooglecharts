@@ -3,20 +3,26 @@ package orm
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
 // dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
-var dummy_Ressource sql.NullBool
-var __Ressource_time__dummyDeclaration time.Duration
+var dummy_Ressource_sql sql.NullBool
+var dummy_Ressource_time time.Duration
 var dummy_Ressource_sort sort.Float64Slice
 
 // RessourceAPI is the input in POST API
@@ -27,24 +33,35 @@ var dummy_Ressource_sort sort.Float64Slice
 //
 // swagger:model ressourceAPI
 type RessourceAPI struct {
+	gorm.Model
+
 	models.Ressource
 
-	// insertion for fields declaration
-	// Declation for basic field ressourceDB.Name {{BasicKind}} (to be completed)
-	Name_Data sql.NullString
+	// encoding of pointers
+	RessourcePointersEnconding
+}
 
-	// end of insertion
+// RessourcePointersEnconding encodes pointers to Struct and
+// reverse pointers of slice of poitners to Struct
+type RessourcePointersEnconding struct {
+	// insertion for pointer fields encoding declaration
 }
 
 // RessourceDB describes a ressource in the database
 //
-// It incorporates all fields : from the model, from the generated field for the API and the GORM ID
+// It incorporates the GORM ID, basic fields from the model (because they can be serialized),
+// the encoded version of pointers
 //
 // swagger:model ressourceDB
 type RessourceDB struct {
 	gorm.Model
 
-	RessourceAPI
+	// insertion for basic fields declaration
+	// Declation for basic field ressourceDB.Name {{BasicKind}} (to be completed)
+	Name_Data sql.NullString
+
+	// encoding of pointers
+	RessourcePointersEnconding
 }
 
 // RessourceDBs arrays ressourceDBs
@@ -55,6 +72,23 @@ type RessourceDBs []RessourceDB
 // swagger:response ressourceDBResponse
 type RessourceDBResponse struct {
 	RessourceDB
+}
+
+// RessourceWOP is a Ressource without pointers (WOP is an acronym for "Without Pointers")
+// it holds the same basic fields but pointers are encoded into uint
+type RessourceWOP struct {
+	ID int
+
+	// insertion for WOP basic fields
+
+	Name string
+	// insertion for WOP pointer fields
+}
+
+var Ressource_Fields = []string{
+	// insertion for WOP basic fields
+	"ID",
+	"Name",
 }
 
 type BackRepoRessourceStruct struct {
@@ -68,6 +102,17 @@ type BackRepoRessourceStruct struct {
 	Map_RessourceDBID_RessourcePtr *map[uint]*models.Ressource
 
 	db *gorm.DB
+}
+
+func (backRepoRessource *BackRepoRessourceStruct) GetDB() *gorm.DB {
+	return backRepoRessource.db
+}
+
+// GetRessourceDBFromRessourcePtr is a handy function to access the back repo instance from the stage instance
+func (backRepoRessource *BackRepoRessourceStruct) GetRessourceDBFromRessourcePtr(ressource *models.Ressource) (ressourceDB *RessourceDB) {
+	id := (*backRepoRessource.Map_RessourcePtr_RessourceDBID)[ressource]
+	ressourceDB = (*backRepoRessource.Map_RessourceDBID_RessourceDB)[id]
+	return
 }
 
 // BackRepoRessource.Init set up the BackRepo of the Ressource
@@ -151,7 +196,7 @@ func (backRepoRessource *BackRepoRessourceStruct) CommitPhaseOneInstance(ressour
 
 	// initiate ressource
 	var ressourceDB RessourceDB
-	ressourceDB.Ressource = *ressource
+	ressourceDB.CopyBasicFieldsFromRessource(ressource)
 
 	query := backRepoRessource.db.Create(&ressourceDB)
 	if query.Error != nil {
@@ -184,14 +229,9 @@ func (backRepoRessource *BackRepoRessourceStruct) CommitPhaseTwoInstance(backRep
 	// fetch matching ressourceDB
 	if ressourceDB, ok := (*backRepoRessource.Map_RessourceDBID_RessourceDB)[idx]; ok {
 
-		{
-			{
-				// insertion point for fields commit
-				ressourceDB.Name_Data.String = ressource.Name
-				ressourceDB.Name_Data.Valid = true
+		ressourceDB.CopyBasicFieldsFromRessource(ressource)
 
-			}
-		}
+		// insertion point for translating pointers encodings into actual pointers
 		query := backRepoRessource.db.Save(&ressourceDB)
 		if query.Error != nil {
 			return query.Error
@@ -208,9 +248,8 @@ func (backRepoRessource *BackRepoRessourceStruct) CommitPhaseTwoInstance(backRep
 
 // BackRepoRessource.CheckoutPhaseOne Checkouts all BackRepo instances to the Stage
 //
-// Phase One is the creation of instance in the stage
-//
-// NOTE: the is supposed to have been reset before
+// Phase One will result in having instances on the stage aligned with the back repo
+// pointers are not initialized yet (this is for pahse two)
 //
 func (backRepoRessource *BackRepoRessourceStruct) CheckoutPhaseOne() (Error error) {
 
@@ -220,9 +259,34 @@ func (backRepoRessource *BackRepoRessourceStruct) CheckoutPhaseOne() (Error erro
 		return query.Error
 	}
 
+	// list of instances to be removed
+	// start from the initial map on the stage and remove instances that have been checked out
+	ressourceInstancesToBeRemovedFromTheStage := make(map[*models.Ressource]struct{})
+	for key, value := range models.Stage.Ressources {
+		ressourceInstancesToBeRemovedFromTheStage[key] = value
+	}
+
 	// copy orm objects to the the map
 	for _, ressourceDB := range ressourceDBArray {
 		backRepoRessource.CheckoutPhaseOneInstance(&ressourceDB)
+
+		// do not remove this instance from the stage, therefore
+		// remove instance from the list of instances to be be removed from the stage
+		ressource, ok := (*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID]
+		if ok {
+			delete(ressourceInstancesToBeRemovedFromTheStage, ressource)
+		}
+	}
+
+	// remove from stage and back repo's 3 maps all ressources that are not in the checkout
+	for ressource := range ressourceInstancesToBeRemovedFromTheStage {
+		ressource.Unstage()
+
+		// remove instance from the back repo 3 maps
+		ressourceID := (*backRepoRessource.Map_RessourcePtr_RessourceDBID)[ressource]
+		delete((*backRepoRessource.Map_RessourcePtr_RessourceDBID), ressource)
+		delete((*backRepoRessource.Map_RessourceDBID_RessourceDB), ressourceID)
+		delete((*backRepoRessource.Map_RessourceDBID_RessourcePtr), ressourceID)
 	}
 
 	return
@@ -232,18 +296,24 @@ func (backRepoRessource *BackRepoRessourceStruct) CheckoutPhaseOne() (Error erro
 // models version of the ressourceDB
 func (backRepoRessource *BackRepoRessourceStruct) CheckoutPhaseOneInstance(ressourceDB *RessourceDB) (Error error) {
 
-	// if absent, create entries in the backRepoRessource maps.
-	ressourceWithNewFieldValues := ressourceDB.Ressource
-	if _, ok := (*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID]; !ok {
+	ressource, ok := (*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID]
+	if !ok {
+		ressource = new(models.Ressource)
 
-		(*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID] = &ressourceWithNewFieldValues
-		(*backRepoRessource.Map_RessourcePtr_RessourceDBID)[&ressourceWithNewFieldValues] = ressourceDB.ID
+		(*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID] = ressource
+		(*backRepoRessource.Map_RessourcePtr_RessourceDBID)[ressource] = ressourceDB.ID
 
 		// append model store with the new element
-		ressourceWithNewFieldValues.Stage()
+		ressource.Name = ressourceDB.Name_Data.String
+		ressource.Stage()
 	}
-	ressourceDBWithNewFieldValues := *ressourceDB
-	(*backRepoRessource.Map_RessourceDBID_RessourceDB)[ressourceDB.ID] = &ressourceDBWithNewFieldValues
+	ressourceDB.CopyBasicFieldsToRessource(ressource)
+
+	// preserve pointer to ressourceDB. Otherwise, pointer will is recycled and the map of pointers
+	// Map_RessourceDBID_RessourceDB)[ressourceDB hold variable pointers
+	ressourceDB_Data := *ressourceDB
+	preservedPtrToRessource := &ressourceDB_Data
+	(*backRepoRessource.Map_RessourceDBID_RessourceDB)[ressourceDB.ID] = preservedPtrToRessource
 
 	return
 }
@@ -265,14 +335,8 @@ func (backRepoRessource *BackRepoRessourceStruct) CheckoutPhaseTwoInstance(backR
 
 	ressource := (*backRepoRessource.Map_RessourceDBID_RessourcePtr)[ressourceDB.ID]
 	_ = ressource // sometimes, there is no code generated. This lines voids the "unused variable" compilation error
-	{
-		{
-			// insertion point for checkout, i.e. update of fields of stage instance from fields of back repo instances
-			//
-			ressource.Name = ressourceDB.Name_Data.String
 
-		}
-	}
+	// insertion point for checkout of pointer encoding
 	return
 }
 
@@ -301,3 +365,155 @@ func (backRepo *BackRepoStruct) CheckoutRessource(ressource *models.Ressource) {
 		}
 	}
 }
+
+// CopyBasicFieldsFromRessource
+func (ressourceDB *RessourceDB) CopyBasicFieldsFromRessource(ressource *models.Ressource) {
+	// insertion point for fields commit
+	ressourceDB.Name_Data.String = ressource.Name
+	ressourceDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsFromRessourceWOP
+func (ressourceDB *RessourceDB) CopyBasicFieldsFromRessourceWOP(ressource *RessourceWOP) {
+	// insertion point for fields commit
+	ressourceDB.Name_Data.String = ressource.Name
+	ressourceDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsToRessource
+func (ressourceDB *RessourceDB) CopyBasicFieldsToRessource(ressource *models.Ressource) {
+	// insertion point for checkout of basic fields (back repo to stage)
+	ressource.Name = ressourceDB.Name_Data.String
+}
+
+// CopyBasicFieldsToRessourceWOP
+func (ressourceDB *RessourceDB) CopyBasicFieldsToRessourceWOP(ressource *RessourceWOP) {
+	ressource.ID = int(ressourceDB.ID)
+	// insertion point for checkout of basic fields (back repo to stage)
+	ressource.Name = ressourceDB.Name_Data.String
+}
+
+// Backup generates a json file from a slice of all RessourceDB instances in the backrepo
+func (backRepoRessource *BackRepoRessourceStruct) Backup(dirPath string) {
+
+	filename := filepath.Join(dirPath, "RessourceDB.json")
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*RessourceDB, 0)
+	for _, ressourceDB := range *backRepoRessource.Map_RessourceDBID_RessourceDB {
+		forBackup = append(forBackup, ressourceDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	file, err := json.MarshalIndent(forBackup, "", " ")
+
+	if err != nil {
+		log.Panic("Cannot json Ressource ", filename, " ", err.Error())
+	}
+
+	err = ioutil.WriteFile(filename, file, 0644)
+	if err != nil {
+		log.Panic("Cannot write the json Ressource file", err.Error())
+	}
+}
+
+// Backup generates a json file from a slice of all RessourceDB instances in the backrepo
+func (backRepoRessource *BackRepoRessourceStruct) BackupXL(file *xlsx.File) {
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*RessourceDB, 0)
+	for _, ressourceDB := range *backRepoRessource.Map_RessourceDBID_RessourceDB {
+		forBackup = append(forBackup, ressourceDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	sh, err := file.AddSheet("Ressource")
+	if err != nil {
+		log.Panic("Cannot add XL file", err.Error())
+	}
+	_ = sh
+
+	row := sh.AddRow()
+	row.WriteSlice(&Ressource_Fields, -1)
+	for _, ressourceDB := range forBackup {
+
+		var ressourceWOP RessourceWOP
+		ressourceDB.CopyBasicFieldsToRessourceWOP(&ressourceWOP)
+
+		row := sh.AddRow()
+		row.WriteStruct(&ressourceWOP, -1)
+	}
+}
+
+// RestorePhaseOne read the file "RessourceDB.json" in dirPath that stores an array
+// of RessourceDB and stores it in the database
+// the map BackRepoRessourceid_atBckpTime_newID is updated accordingly
+func (backRepoRessource *BackRepoRessourceStruct) RestorePhaseOne(dirPath string) {
+
+	// resets the map
+	BackRepoRessourceid_atBckpTime_newID = make(map[uint]uint)
+
+	filename := filepath.Join(dirPath, "RessourceDB.json")
+	jsonFile, err := os.Open(filename)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		log.Panic("Cannot restore/open the json Ressource file", filename, " ", err.Error())
+	}
+
+	// read our opened jsonFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var forRestore []*RessourceDB
+
+	err = json.Unmarshal(byteValue, &forRestore)
+
+	// fill up Map_RessourceDBID_RessourceDB
+	for _, ressourceDB := range forRestore {
+
+		ressourceDB_ID_atBackupTime := ressourceDB.ID
+		ressourceDB.ID = 0
+		query := backRepoRessource.db.Create(ressourceDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+		(*backRepoRessource.Map_RessourceDBID_RessourceDB)[ressourceDB.ID] = ressourceDB
+		BackRepoRessourceid_atBckpTime_newID[ressourceDB_ID_atBackupTime] = ressourceDB.ID
+	}
+
+	if err != nil {
+		log.Panic("Cannot restore/unmarshall json Ressource file", err.Error())
+	}
+}
+
+// RestorePhaseTwo uses all map BackRepo<Ressource>id_atBckpTime_newID
+// to compute new index
+func (backRepoRessource *BackRepoRessourceStruct) RestorePhaseTwo() {
+
+	for _, ressourceDB := range *backRepoRessource.Map_RessourceDBID_RessourceDB {
+
+		// next line of code is to avert unused variable compilation error
+		_ = ressourceDB
+
+		// insertion point for reindexing pointers encoding
+		// update databse with new index encoding
+		query := backRepoRessource.db.Model(ressourceDB).Updates(*ressourceDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+	}
+
+}
+
+// this field is used during the restauration process.
+// it stores the ID at the backup time and is used for renumbering
+var BackRepoRessourceid_atBckpTime_newID map[uint]uint

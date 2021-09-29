@@ -9,7 +9,6 @@ import (
 	"github.com/fullstack-lang/gonggooglecharts/go/orm"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 // declaration in order to justify use of the models import
@@ -47,10 +46,11 @@ type DependencyInput struct {
 //    default: genericError
 //        200: dependencyDBsResponse
 func GetDependencys(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-
-	var dependencys []orm.DependencyDB
-	query := db.Find(&dependencys)
+	db := orm.BackRepo.BackRepoDependency.GetDB()
+	
+	// source slice
+	var dependencyDBs []orm.DependencyDB
+	query := db.Find(&dependencyDBs)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -59,18 +59,23 @@ func GetDependencys(c *gin.Context) {
 		return
 	}
 
-	// for each dependency, update fields from the database nullable fields
-	for idx := range dependencys {
-		dependency := &dependencys[idx]
-		_ = dependency
-		// insertion point for updating fields
-		if dependency.Name_Data.Valid {
-			dependency.Name = dependency.Name_Data.String
-		}
+	// slice that will be transmitted to the front
+	dependencyAPIs := make([]orm.DependencyAPI, 0)
 
+	// for each dependency, update fields from the database nullable fields
+	for idx := range dependencyDBs {
+		dependencyDB := &dependencyDBs[idx]
+		_ = dependencyDB
+		var dependencyAPI orm.DependencyAPI
+
+		// insertion point for updating fields
+		dependencyAPI.ID = dependencyDB.ID
+		dependencyDB.CopyBasicFieldsToDependency(&dependencyAPI.Dependency)
+		dependencyAPI.DependencyPointersEnconding = dependencyDB.DependencyPointersEnconding
+		dependencyAPIs = append(dependencyAPIs, dependencyAPI)
 	}
 
-	c.JSON(http.StatusOK, dependencys)
+	c.JSON(http.StatusOK, dependencyAPIs)
 }
 
 // PostDependency
@@ -87,7 +92,7 @@ func GetDependencys(c *gin.Context) {
 //     Responses:
 //       200: dependencyDBResponse
 func PostDependency(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoDependency.GetDB()
 
 	// Validate input
 	var input orm.DependencyAPI
@@ -103,10 +108,8 @@ func PostDependency(c *gin.Context) {
 
 	// Create dependency
 	dependencyDB := orm.DependencyDB{}
-	dependencyDB.DependencyAPI = input
-	// insertion point for nullable field set
-	dependencyDB.Name_Data.String = input.Name
-	dependencyDB.Name_Data.Valid = true
+	dependencyDB.DependencyPointersEnconding = input.DependencyPointersEnconding
+	dependencyDB.CopyBasicFieldsFromDependency(&input.Dependency)
 
 	query := db.Create(&dependencyDB)
 	if query.Error != nil {
@@ -119,7 +122,7 @@ func PostDependency(c *gin.Context) {
 
 	// a POST is equivalent to a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, dependencyDB)
 }
@@ -134,11 +137,11 @@ func PostDependency(c *gin.Context) {
 //    default: genericError
 //        200: dependencyDBResponse
 func GetDependency(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoDependency.GetDB()
 
-	// Get dependency in DB
-	var dependency orm.DependencyDB
-	if err := db.First(&dependency, c.Param("id")).Error; err != nil {
+	// Get dependencyDB in DB
+	var dependencyDB orm.DependencyDB
+	if err := db.First(&dependencyDB, c.Param("id")).Error; err != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
 		returnError.Body.Message = err.Error()
@@ -146,12 +149,12 @@ func GetDependency(c *gin.Context) {
 		return
 	}
 
-	// insertion point for fields value set from nullable fields
-	if dependency.Name_Data.Valid {
-		dependency.Name = dependency.Name_Data.String
-	}
+	var dependencyAPI orm.DependencyAPI
+	dependencyAPI.ID = dependencyDB.ID
+	dependencyAPI.DependencyPointersEnconding = dependencyDB.DependencyPointersEnconding
+	dependencyDB.CopyBasicFieldsToDependency(&dependencyAPI.Dependency)
 
-	c.JSON(http.StatusOK, dependency)
+	c.JSON(http.StatusOK, dependencyAPI)
 }
 
 // UpdateDependency
@@ -164,7 +167,7 @@ func GetDependency(c *gin.Context) {
 //    default: genericError
 //        200: dependencyDBResponse
 func UpdateDependency(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoDependency.GetDB()
 
 	// Get model if exist
 	var dependencyDB orm.DependencyDB
@@ -188,11 +191,10 @@ func UpdateDependency(c *gin.Context) {
 	}
 
 	// update
-	// insertion point for nullable field set
-	input.Name_Data.String = input.Name
-	input.Name_Data.Valid = true
+	dependencyDB.CopyBasicFieldsFromDependency(&input.Dependency)
+	dependencyDB.DependencyPointersEnconding = input.DependencyPointersEnconding
 
-	query = db.Model(&dependencyDB).Updates(input)
+	query = db.Model(&dependencyDB).Updates(dependencyDB)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -203,7 +205,7 @@ func UpdateDependency(c *gin.Context) {
 
 	// an UPDATE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	// return status OK with the marshalling of the the dependencyDB
 	c.JSON(http.StatusOK, dependencyDB)
@@ -218,7 +220,7 @@ func UpdateDependency(c *gin.Context) {
 // Responses:
 //    default: genericError
 func DeleteDependency(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoDependency.GetDB()
 
 	// Get model if exist
 	var dependencyDB orm.DependencyDB
@@ -235,7 +237,7 @@ func DeleteDependency(c *gin.Context) {
 
 	// a DELETE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
 }

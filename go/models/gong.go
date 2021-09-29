@@ -12,20 +12,24 @@ var __member __void
 // StageStruct enables storage of staged instances
 // swagger:ignore
 type StageStruct struct { // insertion point for definition of arrays registering instances
-	Dependencys map[*Dependency]struct{}
+	Dependencys           map[*Dependency]struct{}
+	Dependencys_mapString map[string]*Dependency
 
-	GanttCharts map[*GanttChart]struct{}
+	GanttCharts           map[*GanttChart]struct{}
+	GanttCharts_mapString map[string]*GanttChart
 
-	Ressources map[*Ressource]struct{}
+	Ressources           map[*Ressource]struct{}
+	Ressources_mapString map[string]*Ressource
 
-	Tasks map[*Task]struct{}
+	Tasks           map[*Task]struct{}
+	Tasks_mapString map[string]*Task
 
 	AllModelsStructCreateCallback AllModelsStructCreateInterface
 
 	AllModelsStructDeleteCallback AllModelsStructDeleteInterface
 
 	BackRepo BackRepoInterface
-	
+
 	// if set will be called before each commit to the back repo
 	OnInitCommitCallback OnInitCommitInterface
 }
@@ -37,6 +41,10 @@ type OnInitCommitInterface interface {
 type BackRepoInterface interface {
 	Commit(stage *StageStruct)
 	Checkout(stage *StageStruct)
+	Backup(stage *StageStruct, dirPath string)
+	Restore(stage *StageStruct, dirPath string)
+	BackupXL(stage *StageStruct, dirPath string)
+	RestoreXL(stage *StageStruct, dirPath string)
 	// insertion point for Commit and Checkout signatures
 	CommitDependency(dependency *Dependency)
 	CheckoutDependency(dependency *Dependency)
@@ -47,18 +55,24 @@ type BackRepoInterface interface {
 	CommitTask(task *Task)
 	CheckoutTask(task *Task)
 	GetLastCommitNb() uint
+	GetLastPushFromFrontNb() uint
 }
 
 // swagger:ignore instructs the gong compiler (gongc) to avoid this particular struct
 var Stage StageStruct = StageStruct{ // insertion point for array initiatialisation
-	Dependencys: make(map[*Dependency]struct{}, 0),
+	Dependencys:           make(map[*Dependency]struct{}),
+	Dependencys_mapString: make(map[string]*Dependency),
 
-	GanttCharts: make(map[*GanttChart]struct{}, 0),
+	GanttCharts:           make(map[*GanttChart]struct{}),
+	GanttCharts_mapString: make(map[string]*GanttChart),
 
-	Ressources: make(map[*Ressource]struct{}, 0),
+	Ressources:           make(map[*Ressource]struct{}),
+	Ressources_mapString: make(map[string]*Ressource),
 
-	Tasks: make(map[*Task]struct{}, 0),
+	Tasks:           make(map[*Task]struct{}),
+	Tasks_mapString: make(map[string]*Task),
 
+	// end of insertion point
 }
 
 func (stage *StageStruct) Commit() {
@@ -70,6 +84,34 @@ func (stage *StageStruct) Commit() {
 func (stage *StageStruct) Checkout() {
 	if stage.BackRepo != nil {
 		stage.BackRepo.Checkout(stage)
+	}
+}
+
+// backup generates backup files in the dirPath
+func (stage *StageStruct) Backup(dirPath string) {
+	if stage.BackRepo != nil {
+		stage.BackRepo.Backup(stage, dirPath)
+	}
+}
+
+// Restore resets Stage & BackRepo and restores their content from the restore files in dirPath
+func (stage *StageStruct) Restore(dirPath string) {
+	if stage.BackRepo != nil {
+		stage.BackRepo.Restore(stage, dirPath)
+	}
+}
+
+// backup generates backup files in the dirPath
+func (stage *StageStruct) BackupXL(dirPath string) {
+	if stage.BackRepo != nil {
+		stage.BackRepo.BackupXL(stage, dirPath)
+	}
+}
+
+// Restore resets Stage & BackRepo and restores their content from the restore files in dirPath
+func (stage *StageStruct) RestoreXL(dirPath string) {
+	if stage.BackRepo != nil {
+		stage.BackRepo.RestoreXL(stage, dirPath)
 	}
 }
 
@@ -89,12 +131,15 @@ func (stage *StageStruct) getDependencyOrderedStructWithNameField() []*Dependenc
 // Stage puts dependency to the model stage
 func (dependency *Dependency) Stage() *Dependency {
 	Stage.Dependencys[dependency] = __member
+	Stage.Dependencys_mapString[dependency.Name] = dependency
+
 	return dependency
 }
 
 // Unstage removes dependency off the model stage
 func (dependency *Dependency) Unstage() *Dependency {
 	delete(Stage.Dependencys, dependency)
+	delete(Stage.Dependencys_mapString, dependency.Name)
 	return dependency
 }
 
@@ -188,12 +233,15 @@ func (stage *StageStruct) getGanttChartOrderedStructWithNameField() []*GanttChar
 // Stage puts ganttchart to the model stage
 func (ganttchart *GanttChart) Stage() *GanttChart {
 	Stage.GanttCharts[ganttchart] = __member
+	Stage.GanttCharts_mapString[ganttchart.Name] = ganttchart
+
 	return ganttchart
 }
 
 // Unstage removes ganttchart off the model stage
 func (ganttchart *GanttChart) Unstage() *GanttChart {
 	delete(Stage.GanttCharts, ganttchart)
+	delete(Stage.GanttCharts_mapString, ganttchart.Name)
 	return ganttchart
 }
 
@@ -287,12 +335,15 @@ func (stage *StageStruct) getRessourceOrderedStructWithNameField() []*Ressource 
 // Stage puts ressource to the model stage
 func (ressource *Ressource) Stage() *Ressource {
 	Stage.Ressources[ressource] = __member
+	Stage.Ressources_mapString[ressource.Name] = ressource
+
 	return ressource
 }
 
 // Unstage removes ressource off the model stage
 func (ressource *Ressource) Unstage() *Ressource {
 	delete(Stage.Ressources, ressource)
+	delete(Stage.Ressources_mapString, ressource.Name)
 	return ressource
 }
 
@@ -386,12 +437,15 @@ func (stage *StageStruct) getTaskOrderedStructWithNameField() []*Task {
 // Stage puts task to the model stage
 func (task *Task) Stage() *Task {
 	Stage.Tasks[task] = __member
+	Stage.Tasks_mapString[task.Name] = task
+
 	return task
 }
 
 // Unstage removes task off the model stage
 func (task *Task) Unstage() *Task {
 	delete(Stage.Tasks, task)
+	delete(Stage.Tasks_mapString, task.Name)
 	return task
 }
 
@@ -486,15 +540,31 @@ type AllModelsStructDeleteInterface interface { // insertion point for Callbacks
 }
 
 func (stage *StageStruct) Reset() { // insertion point for array reset
-	stage.Dependencys = make(map[*Dependency]struct{}, 0)
-	stage.GanttCharts = make(map[*GanttChart]struct{}, 0)
-	stage.Ressources = make(map[*Ressource]struct{}, 0)
-	stage.Tasks = make(map[*Task]struct{}, 0)
+	stage.Dependencys = make(map[*Dependency]struct{})
+	stage.Dependencys_mapString = make(map[string]*Dependency)
+
+	stage.GanttCharts = make(map[*GanttChart]struct{})
+	stage.GanttCharts_mapString = make(map[string]*GanttChart)
+
+	stage.Ressources = make(map[*Ressource]struct{})
+	stage.Ressources_mapString = make(map[string]*Ressource)
+
+	stage.Tasks = make(map[*Task]struct{})
+	stage.Tasks_mapString = make(map[string]*Task)
+
 }
 
 func (stage *StageStruct) Nil() { // insertion point for array nil
 	stage.Dependencys = nil
+	stage.Dependencys_mapString = nil
+
 	stage.GanttCharts = nil
+	stage.GanttCharts_mapString = nil
+
 	stage.Ressources = nil
+	stage.Ressources_mapString = nil
+
 	stage.Tasks = nil
+	stage.Tasks_mapString = nil
+
 }

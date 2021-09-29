@@ -3,20 +3,26 @@ package orm
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
 // dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
-var dummy_Task sql.NullBool
-var __Task_time__dummyDeclaration time.Duration
+var dummy_Task_sql sql.NullBool
+var dummy_Task_time time.Duration
 var dummy_Task_sort sort.Float64Slice
 
 // TaskAPI is the input in POST API
@@ -27,21 +33,44 @@ var dummy_Task_sort sort.Float64Slice
 //
 // swagger:model taskAPI
 type TaskAPI struct {
+	gorm.Model
+
 	models.Task
 
-	// insertion for fields declaration
+	// encoding of pointers
+	TaskPointersEnconding
+}
+
+// TaskPointersEnconding encodes pointers to Struct and
+// reverse pointers of slice of poitners to Struct
+type TaskPointersEnconding struct {
+	// insertion for pointer fields encoding declaration
+	// field Ressource is a pointer to another Struct (optional or 0..1)
+	// This field is generated into another field to enable AS ONE association
+	RessourceID sql.NullInt64
+
+	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
+	GanttChart_TasksDBID sql.NullInt64
+
+	// implementation of the index of the withing the slice
+	GanttChart_TasksDBID_Index sql.NullInt64
+}
+
+// TaskDB describes a task in the database
+//
+// It incorporates the GORM ID, basic fields from the model (because they can be serialized),
+// the encoded version of pointers
+//
+// swagger:model taskDB
+type TaskDB struct {
+	gorm.Model
+
+	// insertion for basic fields declaration
 	// Declation for basic field taskDB.Name {{BasicKind}} (to be completed)
 	Name_Data sql.NullString
 
 	// Declation for basic field taskDB.DisplayedName {{BasicKind}} (to be completed)
 	DisplayedName_Data sql.NullString
-
-	// field Ressource is a pointer to another Struct (optional or 0..1)
-	// This field is generated into another field to enable AS ONE association
-	RessourceID sql.NullInt64
-
-	// all gong Struct has a Name field, this enables this data to object field
-	RessourceName string
 
 	// Declation for basic field taskDB.Start
 	Start_Data sql.NullTime
@@ -58,22 +87,8 @@ type TaskAPI struct {
 	// Declation for basic field taskDB.Rank {{BasicKind}} (to be completed)
 	Rank_Data sql.NullInt64
 
-	// Implementation of a reverse ID for field GanttChart{}.Tasks []*Task
-	GanttChart_TasksDBID sql.NullInt64
-	GanttChart_TasksDBID_Index sql.NullInt64
-
-	// end of insertion
-}
-
-// TaskDB describes a task in the database
-//
-// It incorporates all fields : from the model, from the generated field for the API and the GORM ID
-//
-// swagger:model taskDB
-type TaskDB struct {
-	gorm.Model
-
-	TaskAPI
+	// encoding of pointers
+	TaskPointersEnconding
 }
 
 // TaskDBs arrays taskDBs
@@ -84,6 +99,41 @@ type TaskDBs []TaskDB
 // swagger:response taskDBResponse
 type TaskDBResponse struct {
 	TaskDB
+}
+
+// TaskWOP is a Task without pointers (WOP is an acronym for "Without Pointers")
+// it holds the same basic fields but pointers are encoded into uint
+type TaskWOP struct {
+	ID int
+
+	// insertion for WOP basic fields
+
+	Name string
+
+	DisplayedName string
+
+	Start time.Time
+
+	End time.Time
+
+	Duration time.Duration
+
+	PercentComplete float64
+
+	Rank int
+	// insertion for WOP pointer fields
+}
+
+var Task_Fields = []string{
+	// insertion for WOP basic fields
+	"ID",
+	"Name",
+	"DisplayedName",
+	"Start",
+	"End",
+	"Duration",
+	"PercentComplete",
+	"Rank",
 }
 
 type BackRepoTaskStruct struct {
@@ -97,6 +147,17 @@ type BackRepoTaskStruct struct {
 	Map_TaskDBID_TaskPtr *map[uint]*models.Task
 
 	db *gorm.DB
+}
+
+func (backRepoTask *BackRepoTaskStruct) GetDB() *gorm.DB {
+	return backRepoTask.db
+}
+
+// GetTaskDBFromTaskPtr is a handy function to access the back repo instance from the stage instance
+func (backRepoTask *BackRepoTaskStruct) GetTaskDBFromTaskPtr(task *models.Task) (taskDB *TaskDB) {
+	id := (*backRepoTask.Map_TaskPtr_TaskDBID)[task]
+	taskDB = (*backRepoTask.Map_TaskDBID_TaskDB)[id]
+	return
 }
 
 // BackRepoTask.Init set up the BackRepo of the Task
@@ -180,7 +241,7 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseOneInstance(task *models.Task
 
 	// initiate task
 	var taskDB TaskDB
-	taskDB.Task = *task
+	taskDB.CopyBasicFieldsFromTask(task)
 
 	query := backRepoTask.db.Create(&taskDB)
 	if query.Error != nil {
@@ -213,57 +274,36 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 	// fetch matching taskDB
 	if taskDB, ok := (*backRepoTask.Map_TaskDBID_TaskDB)[idx]; ok {
 
-		{
-			{
-				// insertion point for fields commit
-				taskDB.Name_Data.String = task.Name
-				taskDB.Name_Data.Valid = true
+		taskDB.CopyBasicFieldsFromTask(task)
 
-				taskDB.DisplayedName_Data.String = task.DisplayedName
-				taskDB.DisplayedName_Data.Valid = true
-
-				// commit pointer value task.Ressource translates to updating the task.RessourceID
-				taskDB.RessourceID.Valid = true // allow for a 0 value (nil association)
-				if task.Ressource != nil {
-					if RessourceId, ok := (*backRepo.BackRepoRessource.Map_RessourcePtr_RessourceDBID)[task.Ressource]; ok {
-						taskDB.RessourceID.Int64 = int64(RessourceId)
-					}
-				}
-
-				taskDB.Start_Data.Time = task.Start
-				taskDB.Start_Data.Valid = true
-
-				taskDB.End_Data.Time = task.End
-				taskDB.End_Data.Valid = true
-
-				taskDB.Duration_Data.Int64 = int64(task.Duration)
-				taskDB.Duration_Data.Valid = true
-
-				taskDB.PercentComplete_Data.Float64 = task.PercentComplete
-				taskDB.PercentComplete_Data.Valid = true
-
-				// commit a slice of pointer translates to update reverse pointer to Dependency, i.e.
-				index_Dependencies := 0
-				for _, dependency := range task.Dependencies {
-					if dependencyDBID, ok := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]; ok {
-						if dependencyDB, ok := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDBID]; ok {
-							dependencyDB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
-							dependencyDB.Task_DependenciesDBID.Valid = true
-							dependencyDB.Task_DependenciesDBID_Index.Int64 = int64(index_Dependencies)
-							index_Dependencies = index_Dependencies + 1
-							dependencyDB.Task_DependenciesDBID_Index.Valid = true
-							if q := backRepoTask.db.Save(&dependencyDB); q.Error != nil {
-								return q.Error
-							}
-						}
-					}
-				}
-
-				taskDB.Rank_Data.Int64 = int64(task.Rank)
-				taskDB.Rank_Data.Valid = true
-
+		// insertion point for translating pointers encodings into actual pointers
+		// commit pointer value task.Ressource translates to updating the task.RessourceID
+		taskDB.RessourceID.Valid = true // allow for a 0 value (nil association)
+		if task.Ressource != nil {
+			if RessourceId, ok := (*backRepo.BackRepoRessource.Map_RessourcePtr_RessourceDBID)[task.Ressource]; ok {
+				taskDB.RessourceID.Int64 = int64(RessourceId)
 			}
 		}
+
+		// This loop encodes the slice of pointers task.Dependencies into the back repo.
+		// Each back repo instance at the end of the association encode the ID of the association start
+		// into a dedicated field for coding the association. The back repo instance is then saved to the db
+		for idx, dependencyAssocEnd := range task.Dependencies {
+
+			// get the back repo instance at the association end
+			dependencyAssocEnd_DB :=
+				backRepo.BackRepoDependency.GetDependencyDBFromDependencyPtr(dependencyAssocEnd)
+
+			// encode reverse pointer in the association end back repo instance
+			dependencyAssocEnd_DB.Task_DependenciesDBID.Int64 = int64(taskDB.ID)
+			dependencyAssocEnd_DB.Task_DependenciesDBID.Valid = true
+			dependencyAssocEnd_DB.Task_DependenciesDBID_Index.Int64 = int64(idx)
+			dependencyAssocEnd_DB.Task_DependenciesDBID_Index.Valid = true
+			if q := backRepoTask.db.Save(dependencyAssocEnd_DB); q.Error != nil {
+				return q.Error
+			}
+		}
+
 		query := backRepoTask.db.Save(&taskDB)
 		if query.Error != nil {
 			return query.Error
@@ -280,9 +320,8 @@ func (backRepoTask *BackRepoTaskStruct) CommitPhaseTwoInstance(backRepo *BackRep
 
 // BackRepoTask.CheckoutPhaseOne Checkouts all BackRepo instances to the Stage
 //
-// Phase One is the creation of instance in the stage
-//
-// NOTE: the is supposed to have been reset before
+// Phase One will result in having instances on the stage aligned with the back repo
+// pointers are not initialized yet (this is for pahse two)
 //
 func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseOne() (Error error) {
 
@@ -292,9 +331,34 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseOne() (Error error) {
 		return query.Error
 	}
 
+	// list of instances to be removed
+	// start from the initial map on the stage and remove instances that have been checked out
+	taskInstancesToBeRemovedFromTheStage := make(map[*models.Task]struct{})
+	for key, value := range models.Stage.Tasks {
+		taskInstancesToBeRemovedFromTheStage[key] = value
+	}
+
 	// copy orm objects to the the map
 	for _, taskDB := range taskDBArray {
 		backRepoTask.CheckoutPhaseOneInstance(&taskDB)
+
+		// do not remove this instance from the stage, therefore
+		// remove instance from the list of instances to be be removed from the stage
+		task, ok := (*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID]
+		if ok {
+			delete(taskInstancesToBeRemovedFromTheStage, task)
+		}
+	}
+
+	// remove from stage and back repo's 3 maps all tasks that are not in the checkout
+	for task := range taskInstancesToBeRemovedFromTheStage {
+		task.Unstage()
+
+		// remove instance from the back repo 3 maps
+		taskID := (*backRepoTask.Map_TaskPtr_TaskDBID)[task]
+		delete((*backRepoTask.Map_TaskPtr_TaskDBID), task)
+		delete((*backRepoTask.Map_TaskDBID_TaskDB), taskID)
+		delete((*backRepoTask.Map_TaskDBID_TaskPtr), taskID)
 	}
 
 	return
@@ -304,18 +368,24 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseOne() (Error error) {
 // models version of the taskDB
 func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseOneInstance(taskDB *TaskDB) (Error error) {
 
-	// if absent, create entries in the backRepoTask maps.
-	taskWithNewFieldValues := taskDB.Task
-	if _, ok := (*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID]; !ok {
+	task, ok := (*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID]
+	if !ok {
+		task = new(models.Task)
 
-		(*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID] = &taskWithNewFieldValues
-		(*backRepoTask.Map_TaskPtr_TaskDBID)[&taskWithNewFieldValues] = taskDB.ID
+		(*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID] = task
+		(*backRepoTask.Map_TaskPtr_TaskDBID)[task] = taskDB.ID
 
 		// append model store with the new element
-		taskWithNewFieldValues.Stage()
+		task.Name = taskDB.Name_Data.String
+		task.Stage()
 	}
-	taskDBWithNewFieldValues := *taskDB
-	(*backRepoTask.Map_TaskDBID_TaskDB)[taskDB.ID] = &taskDBWithNewFieldValues
+	taskDB.CopyBasicFieldsToTask(task)
+
+	// preserve pointer to taskDB. Otherwise, pointer will is recycled and the map of pointers
+	// Map_TaskDBID_TaskDB)[taskDB hold variable pointers
+	taskDB_Data := *taskDB
+	preservedPtrToTask := &taskDB_Data
+	(*backRepoTask.Map_TaskDBID_TaskDB)[taskDB.ID] = preservedPtrToTask
 
 	return
 }
@@ -337,52 +407,39 @@ func (backRepoTask *BackRepoTaskStruct) CheckoutPhaseTwoInstance(backRepo *BackR
 
 	task := (*backRepoTask.Map_TaskDBID_TaskPtr)[taskDB.ID]
 	_ = task // sometimes, there is no code generated. This lines voids the "unused variable" compilation error
-	{
-		{
-			// insertion point for checkout, i.e. update of fields of stage instance from fields of back repo instances
-			//
-			task.Name = taskDB.Name_Data.String
 
-			task.DisplayedName = taskDB.DisplayedName_Data.String
-
-			// Ressource field
-			if taskDB.RessourceID.Int64 != 0 {
-				task.Ressource = (*backRepo.BackRepoRessource.Map_RessourceDBID_RessourcePtr)[uint(taskDB.RessourceID.Int64)]
-			}
-
-			task.Start = taskDB.Start_Data.Time
-
-			task.End = taskDB.End_Data.Time
-
-			task.Duration = time.Duration(taskDB.Duration_Data.Int64)
-
-			task.PercentComplete = taskDB.PercentComplete_Data.Float64
-
-			// parse all DependencyDB and redeem the array of poiners to Task
-			// first reset the slice
-			task.Dependencies = task.Dependencies[:0]
-			for _, DependencyDB := range *backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB {
-				if DependencyDB.Task_DependenciesDBID.Int64 == int64(taskDB.ID) {
-					Dependency := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyPtr)[DependencyDB.ID]
-					task.Dependencies = append(task.Dependencies, Dependency)
-				}
-			}
-			
-			// sort the array according to the order
-			sort.Slice(task.Dependencies, func(i, j int) bool {
-				dependencyDB_i_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[i]]
-				dependencyDB_j_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[j]]
-
-				dependencyDB_i := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_i_ID]
-				dependencyDB_j := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_j_ID]
-
-				return dependencyDB_i.Task_DependenciesDBID_Index.Int64 < dependencyDB_j.Task_DependenciesDBID_Index.Int64
-			})
-
-			task.Rank = int(taskDB.Rank_Data.Int64)
-
+	// insertion point for checkout of pointer encoding
+	// Ressource field
+	if taskDB.RessourceID.Int64 != 0 {
+		task.Ressource = (*backRepo.BackRepoRessource.Map_RessourceDBID_RessourcePtr)[uint(taskDB.RessourceID.Int64)]
+	}
+	// This loop redeem task.Dependencies in the stage from the encode in the back repo
+	// It parses all DependencyDB in the back repo and if the reverse pointer encoding matches the back repo ID
+	// it appends the stage instance
+	// 1. reset the slice
+	task.Dependencies = task.Dependencies[:0]
+	// 2. loop all instances in the type in the association end
+	for _, dependencyDB_AssocEnd := range *backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB {
+		// 3. Does the ID encoding at the end and the ID at the start matches ?
+		if dependencyDB_AssocEnd.Task_DependenciesDBID.Int64 == int64(taskDB.ID) {
+			// 4. fetch the associated instance in the stage
+			dependency_AssocEnd := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB_AssocEnd.ID]
+			// 5. append it the association slice
+			task.Dependencies = append(task.Dependencies, dependency_AssocEnd)
 		}
 	}
+
+	// sort the array according to the order
+	sort.Slice(task.Dependencies, func(i, j int) bool {
+		dependencyDB_i_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[i]]
+		dependencyDB_j_ID := (*backRepo.BackRepoDependency.Map_DependencyPtr_DependencyDBID)[task.Dependencies[j]]
+
+		dependencyDB_i := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_i_ID]
+		dependencyDB_j := (*backRepo.BackRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB_j_ID]
+
+		return dependencyDB_i.Task_DependenciesDBID_Index.Int64 < dependencyDB_j.Task_DependenciesDBID_Index.Int64
+	})
+
 	return
 }
 
@@ -411,3 +468,214 @@ func (backRepo *BackRepoStruct) CheckoutTask(task *models.Task) {
 		}
 	}
 }
+
+// CopyBasicFieldsFromTask
+func (taskDB *TaskDB) CopyBasicFieldsFromTask(task *models.Task) {
+	// insertion point for fields commit
+	taskDB.Name_Data.String = task.Name
+	taskDB.Name_Data.Valid = true
+
+	taskDB.DisplayedName_Data.String = task.DisplayedName
+	taskDB.DisplayedName_Data.Valid = true
+
+	taskDB.Start_Data.Time = task.Start
+	taskDB.Start_Data.Valid = true
+
+	taskDB.End_Data.Time = task.End
+	taskDB.End_Data.Valid = true
+
+	taskDB.Duration_Data.Int64 = int64(task.Duration)
+	taskDB.Duration_Data.Valid = true
+
+	taskDB.PercentComplete_Data.Float64 = task.PercentComplete
+	taskDB.PercentComplete_Data.Valid = true
+
+	taskDB.Rank_Data.Int64 = int64(task.Rank)
+	taskDB.Rank_Data.Valid = true
+
+}
+
+// CopyBasicFieldsFromTaskWOP
+func (taskDB *TaskDB) CopyBasicFieldsFromTaskWOP(task *TaskWOP) {
+	// insertion point for fields commit
+	taskDB.Name_Data.String = task.Name
+	taskDB.Name_Data.Valid = true
+
+	taskDB.DisplayedName_Data.String = task.DisplayedName
+	taskDB.DisplayedName_Data.Valid = true
+
+	taskDB.Start_Data.Time = task.Start
+	taskDB.Start_Data.Valid = true
+
+	taskDB.End_Data.Time = task.End
+	taskDB.End_Data.Valid = true
+
+	taskDB.Duration_Data.Int64 = int64(task.Duration)
+	taskDB.Duration_Data.Valid = true
+
+	taskDB.PercentComplete_Data.Float64 = task.PercentComplete
+	taskDB.PercentComplete_Data.Valid = true
+
+	taskDB.Rank_Data.Int64 = int64(task.Rank)
+	taskDB.Rank_Data.Valid = true
+
+}
+
+// CopyBasicFieldsToTask
+func (taskDB *TaskDB) CopyBasicFieldsToTask(task *models.Task) {
+	// insertion point for checkout of basic fields (back repo to stage)
+	task.Name = taskDB.Name_Data.String
+	task.DisplayedName = taskDB.DisplayedName_Data.String
+	task.Start = taskDB.Start_Data.Time
+	task.End = taskDB.End_Data.Time
+	task.Duration = time.Duration(taskDB.Duration_Data.Int64)
+	task.PercentComplete = taskDB.PercentComplete_Data.Float64
+	task.Rank = int(taskDB.Rank_Data.Int64)
+}
+
+// CopyBasicFieldsToTaskWOP
+func (taskDB *TaskDB) CopyBasicFieldsToTaskWOP(task *TaskWOP) {
+	task.ID = int(taskDB.ID)
+	// insertion point for checkout of basic fields (back repo to stage)
+	task.Name = taskDB.Name_Data.String
+	task.DisplayedName = taskDB.DisplayedName_Data.String
+	task.Start = taskDB.Start_Data.Time
+	task.End = taskDB.End_Data.Time
+	task.Duration = time.Duration(taskDB.Duration_Data.Int64)
+	task.PercentComplete = taskDB.PercentComplete_Data.Float64
+	task.Rank = int(taskDB.Rank_Data.Int64)
+}
+
+// Backup generates a json file from a slice of all TaskDB instances in the backrepo
+func (backRepoTask *BackRepoTaskStruct) Backup(dirPath string) {
+
+	filename := filepath.Join(dirPath, "TaskDB.json")
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*TaskDB, 0)
+	for _, taskDB := range *backRepoTask.Map_TaskDBID_TaskDB {
+		forBackup = append(forBackup, taskDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	file, err := json.MarshalIndent(forBackup, "", " ")
+
+	if err != nil {
+		log.Panic("Cannot json Task ", filename, " ", err.Error())
+	}
+
+	err = ioutil.WriteFile(filename, file, 0644)
+	if err != nil {
+		log.Panic("Cannot write the json Task file", err.Error())
+	}
+}
+
+// Backup generates a json file from a slice of all TaskDB instances in the backrepo
+func (backRepoTask *BackRepoTaskStruct) BackupXL(file *xlsx.File) {
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*TaskDB, 0)
+	for _, taskDB := range *backRepoTask.Map_TaskDBID_TaskDB {
+		forBackup = append(forBackup, taskDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	sh, err := file.AddSheet("Task")
+	if err != nil {
+		log.Panic("Cannot add XL file", err.Error())
+	}
+	_ = sh
+
+	row := sh.AddRow()
+	row.WriteSlice(&Task_Fields, -1)
+	for _, taskDB := range forBackup {
+
+		var taskWOP TaskWOP
+		taskDB.CopyBasicFieldsToTaskWOP(&taskWOP)
+
+		row := sh.AddRow()
+		row.WriteStruct(&taskWOP, -1)
+	}
+}
+
+// RestorePhaseOne read the file "TaskDB.json" in dirPath that stores an array
+// of TaskDB and stores it in the database
+// the map BackRepoTaskid_atBckpTime_newID is updated accordingly
+func (backRepoTask *BackRepoTaskStruct) RestorePhaseOne(dirPath string) {
+
+	// resets the map
+	BackRepoTaskid_atBckpTime_newID = make(map[uint]uint)
+
+	filename := filepath.Join(dirPath, "TaskDB.json")
+	jsonFile, err := os.Open(filename)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		log.Panic("Cannot restore/open the json Task file", filename, " ", err.Error())
+	}
+
+	// read our opened jsonFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var forRestore []*TaskDB
+
+	err = json.Unmarshal(byteValue, &forRestore)
+
+	// fill up Map_TaskDBID_TaskDB
+	for _, taskDB := range forRestore {
+
+		taskDB_ID_atBackupTime := taskDB.ID
+		taskDB.ID = 0
+		query := backRepoTask.db.Create(taskDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+		(*backRepoTask.Map_TaskDBID_TaskDB)[taskDB.ID] = taskDB
+		BackRepoTaskid_atBckpTime_newID[taskDB_ID_atBackupTime] = taskDB.ID
+	}
+
+	if err != nil {
+		log.Panic("Cannot restore/unmarshall json Task file", err.Error())
+	}
+}
+
+// RestorePhaseTwo uses all map BackRepo<Task>id_atBckpTime_newID
+// to compute new index
+func (backRepoTask *BackRepoTaskStruct) RestorePhaseTwo() {
+
+	for _, taskDB := range *backRepoTask.Map_TaskDBID_TaskDB {
+
+		// next line of code is to avert unused variable compilation error
+		_ = taskDB
+
+		// insertion point for reindexing pointers encoding
+		// reindexing Ressource field
+		if taskDB.RessourceID.Int64 != 0 {
+			taskDB.RessourceID.Int64 = int64(BackRepoRessourceid_atBckpTime_newID[uint(taskDB.RessourceID.Int64)])
+		}
+
+		// This reindex task.Tasks
+		if taskDB.GanttChart_TasksDBID.Int64 != 0 {
+			taskDB.GanttChart_TasksDBID.Int64 =
+				int64(BackRepoGanttChartid_atBckpTime_newID[uint(taskDB.GanttChart_TasksDBID.Int64)])
+		}
+
+		// update databse with new index encoding
+		query := backRepoTask.db.Model(taskDB).Updates(*taskDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+	}
+
+}
+
+// this field is used during the restauration process.
+// it stores the ID at the backup time and is used for renumbering
+var BackRepoTaskid_atBckpTime_newID map[uint]uint

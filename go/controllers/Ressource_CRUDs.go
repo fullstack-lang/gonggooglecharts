@@ -9,7 +9,6 @@ import (
 	"github.com/fullstack-lang/gonggooglecharts/go/orm"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 // declaration in order to justify use of the models import
@@ -47,10 +46,11 @@ type RessourceInput struct {
 //    default: genericError
 //        200: ressourceDBsResponse
 func GetRessources(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-
-	var ressources []orm.RessourceDB
-	query := db.Find(&ressources)
+	db := orm.BackRepo.BackRepoRessource.GetDB()
+	
+	// source slice
+	var ressourceDBs []orm.RessourceDB
+	query := db.Find(&ressourceDBs)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -59,18 +59,23 @@ func GetRessources(c *gin.Context) {
 		return
 	}
 
-	// for each ressource, update fields from the database nullable fields
-	for idx := range ressources {
-		ressource := &ressources[idx]
-		_ = ressource
-		// insertion point for updating fields
-		if ressource.Name_Data.Valid {
-			ressource.Name = ressource.Name_Data.String
-		}
+	// slice that will be transmitted to the front
+	ressourceAPIs := make([]orm.RessourceAPI, 0)
 
+	// for each ressource, update fields from the database nullable fields
+	for idx := range ressourceDBs {
+		ressourceDB := &ressourceDBs[idx]
+		_ = ressourceDB
+		var ressourceAPI orm.RessourceAPI
+
+		// insertion point for updating fields
+		ressourceAPI.ID = ressourceDB.ID
+		ressourceDB.CopyBasicFieldsToRessource(&ressourceAPI.Ressource)
+		ressourceAPI.RessourcePointersEnconding = ressourceDB.RessourcePointersEnconding
+		ressourceAPIs = append(ressourceAPIs, ressourceAPI)
 	}
 
-	c.JSON(http.StatusOK, ressources)
+	c.JSON(http.StatusOK, ressourceAPIs)
 }
 
 // PostRessource
@@ -87,7 +92,7 @@ func GetRessources(c *gin.Context) {
 //     Responses:
 //       200: ressourceDBResponse
 func PostRessource(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoRessource.GetDB()
 
 	// Validate input
 	var input orm.RessourceAPI
@@ -103,10 +108,8 @@ func PostRessource(c *gin.Context) {
 
 	// Create ressource
 	ressourceDB := orm.RessourceDB{}
-	ressourceDB.RessourceAPI = input
-	// insertion point for nullable field set
-	ressourceDB.Name_Data.String = input.Name
-	ressourceDB.Name_Data.Valid = true
+	ressourceDB.RessourcePointersEnconding = input.RessourcePointersEnconding
+	ressourceDB.CopyBasicFieldsFromRessource(&input.Ressource)
 
 	query := db.Create(&ressourceDB)
 	if query.Error != nil {
@@ -119,7 +122,7 @@ func PostRessource(c *gin.Context) {
 
 	// a POST is equivalent to a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, ressourceDB)
 }
@@ -134,11 +137,11 @@ func PostRessource(c *gin.Context) {
 //    default: genericError
 //        200: ressourceDBResponse
 func GetRessource(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoRessource.GetDB()
 
-	// Get ressource in DB
-	var ressource orm.RessourceDB
-	if err := db.First(&ressource, c.Param("id")).Error; err != nil {
+	// Get ressourceDB in DB
+	var ressourceDB orm.RessourceDB
+	if err := db.First(&ressourceDB, c.Param("id")).Error; err != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
 		returnError.Body.Message = err.Error()
@@ -146,12 +149,12 @@ func GetRessource(c *gin.Context) {
 		return
 	}
 
-	// insertion point for fields value set from nullable fields
-	if ressource.Name_Data.Valid {
-		ressource.Name = ressource.Name_Data.String
-	}
+	var ressourceAPI orm.RessourceAPI
+	ressourceAPI.ID = ressourceDB.ID
+	ressourceAPI.RessourcePointersEnconding = ressourceDB.RessourcePointersEnconding
+	ressourceDB.CopyBasicFieldsToRessource(&ressourceAPI.Ressource)
 
-	c.JSON(http.StatusOK, ressource)
+	c.JSON(http.StatusOK, ressourceAPI)
 }
 
 // UpdateRessource
@@ -164,7 +167,7 @@ func GetRessource(c *gin.Context) {
 //    default: genericError
 //        200: ressourceDBResponse
 func UpdateRessource(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoRessource.GetDB()
 
 	// Get model if exist
 	var ressourceDB orm.RessourceDB
@@ -188,11 +191,10 @@ func UpdateRessource(c *gin.Context) {
 	}
 
 	// update
-	// insertion point for nullable field set
-	input.Name_Data.String = input.Name
-	input.Name_Data.Valid = true
+	ressourceDB.CopyBasicFieldsFromRessource(&input.Ressource)
+	ressourceDB.RessourcePointersEnconding = input.RessourcePointersEnconding
 
-	query = db.Model(&ressourceDB).Updates(input)
+	query = db.Model(&ressourceDB).Updates(ressourceDB)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -203,7 +205,7 @@ func UpdateRessource(c *gin.Context) {
 
 	// an UPDATE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	// return status OK with the marshalling of the the ressourceDB
 	c.JSON(http.StatusOK, ressourceDB)
@@ -218,7 +220,7 @@ func UpdateRessource(c *gin.Context) {
 // Responses:
 //    default: genericError
 func DeleteRessource(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoRessource.GetDB()
 
 	// Get model if exist
 	var ressourceDB orm.RessourceDB
@@ -235,7 +237,7 @@ func DeleteRessource(c *gin.Context) {
 
 	// a DELETE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
 }

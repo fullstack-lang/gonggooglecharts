@@ -9,7 +9,6 @@ import (
 	"github.com/fullstack-lang/gonggooglecharts/go/orm"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 // declaration in order to justify use of the models import
@@ -47,10 +46,11 @@ type TaskInput struct {
 //    default: genericError
 //        200: taskDBsResponse
 func GetTasks(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-
-	var tasks []orm.TaskDB
-	query := db.Find(&tasks)
+	db := orm.BackRepo.BackRepoTask.GetDB()
+	
+	// source slice
+	var taskDBs []orm.TaskDB
+	query := db.Find(&taskDBs)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -59,42 +59,23 @@ func GetTasks(c *gin.Context) {
 		return
 	}
 
+	// slice that will be transmitted to the front
+	taskAPIs := make([]orm.TaskAPI, 0)
+
 	// for each task, update fields from the database nullable fields
-	for idx := range tasks {
-		task := &tasks[idx]
-		_ = task
+	for idx := range taskDBs {
+		taskDB := &taskDBs[idx]
+		_ = taskDB
+		var taskAPI orm.TaskAPI
+
 		// insertion point for updating fields
-		if task.Name_Data.Valid {
-			task.Name = task.Name_Data.String
-		}
-
-		if task.DisplayedName_Data.Valid {
-			task.DisplayedName = task.DisplayedName_Data.String
-		}
-
-		if task.Start_Data.Valid {
-			task.Start = task.Start_Data.Time
-		}
-
-		if task.End_Data.Valid {
-			task.End = task.End_Data.Time
-		}
-
-		if task.Duration_Data.Valid {
-			task.Duration = time.Duration(task.Duration_Data.Int64)
-		}
-
-		if task.PercentComplete_Data.Valid {
-			task.PercentComplete = task.PercentComplete_Data.Float64
-		}
-
-		if task.Rank_Data.Valid {
-			task.Rank = int(task.Rank_Data.Int64)
-		}
-
+		taskAPI.ID = taskDB.ID
+		taskDB.CopyBasicFieldsToTask(&taskAPI.Task)
+		taskAPI.TaskPointersEnconding = taskDB.TaskPointersEnconding
+		taskAPIs = append(taskAPIs, taskAPI)
 	}
 
-	c.JSON(http.StatusOK, tasks)
+	c.JSON(http.StatusOK, taskAPIs)
 }
 
 // PostTask
@@ -111,7 +92,7 @@ func GetTasks(c *gin.Context) {
 //     Responses:
 //       200: taskDBResponse
 func PostTask(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoTask.GetDB()
 
 	// Validate input
 	var input orm.TaskAPI
@@ -127,28 +108,8 @@ func PostTask(c *gin.Context) {
 
 	// Create task
 	taskDB := orm.TaskDB{}
-	taskDB.TaskAPI = input
-	// insertion point for nullable field set
-	taskDB.Name_Data.String = input.Name
-	taskDB.Name_Data.Valid = true
-
-	taskDB.DisplayedName_Data.String = input.DisplayedName
-	taskDB.DisplayedName_Data.Valid = true
-
-	taskDB.Start_Data.Time = input.Start
-	taskDB.Start_Data.Valid = true
-
-	taskDB.End_Data.Time = input.End
-	taskDB.End_Data.Valid = true
-
-	taskDB.Duration_Data.Int64 = int64(input.Duration)
-	taskDB.Duration_Data.Valid = true
-
-	taskDB.PercentComplete_Data.Float64 = input.PercentComplete
-	taskDB.PercentComplete_Data.Valid = true
-
-	taskDB.Rank_Data.Int64 = int64(input.Rank)
-	taskDB.Rank_Data.Valid = true
+	taskDB.TaskPointersEnconding = input.TaskPointersEnconding
+	taskDB.CopyBasicFieldsFromTask(&input.Task)
 
 	query := db.Create(&taskDB)
 	if query.Error != nil {
@@ -161,7 +122,7 @@ func PostTask(c *gin.Context) {
 
 	// a POST is equivalent to a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, taskDB)
 }
@@ -176,11 +137,11 @@ func PostTask(c *gin.Context) {
 //    default: genericError
 //        200: taskDBResponse
 func GetTask(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoTask.GetDB()
 
-	// Get task in DB
-	var task orm.TaskDB
-	if err := db.First(&task, c.Param("id")).Error; err != nil {
+	// Get taskDB in DB
+	var taskDB orm.TaskDB
+	if err := db.First(&taskDB, c.Param("id")).Error; err != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
 		returnError.Body.Message = err.Error()
@@ -188,36 +149,12 @@ func GetTask(c *gin.Context) {
 		return
 	}
 
-	// insertion point for fields value set from nullable fields
-	if task.Name_Data.Valid {
-		task.Name = task.Name_Data.String
-	}
+	var taskAPI orm.TaskAPI
+	taskAPI.ID = taskDB.ID
+	taskAPI.TaskPointersEnconding = taskDB.TaskPointersEnconding
+	taskDB.CopyBasicFieldsToTask(&taskAPI.Task)
 
-	if task.DisplayedName_Data.Valid {
-		task.DisplayedName = task.DisplayedName_Data.String
-	}
-
-	if task.Start_Data.Valid {
-		task.Start = task.Start_Data.Time
-	}
-
-	if task.End_Data.Valid {
-		task.End = task.End_Data.Time
-	}
-
-	if task.Duration_Data.Valid {
-		task.Duration = time.Duration(task.Duration_Data.Int64)
-	}
-
-	if task.PercentComplete_Data.Valid {
-		task.PercentComplete = task.PercentComplete_Data.Float64
-	}
-
-	if task.Rank_Data.Valid {
-		task.Rank = int(task.Rank_Data.Int64)
-	}
-
-	c.JSON(http.StatusOK, task)
+	c.JSON(http.StatusOK, taskAPI)
 }
 
 // UpdateTask
@@ -230,7 +167,7 @@ func GetTask(c *gin.Context) {
 //    default: genericError
 //        200: taskDBResponse
 func UpdateTask(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoTask.GetDB()
 
 	// Get model if exist
 	var taskDB orm.TaskDB
@@ -254,29 +191,10 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	// update
-	// insertion point for nullable field set
-	input.Name_Data.String = input.Name
-	input.Name_Data.Valid = true
+	taskDB.CopyBasicFieldsFromTask(&input.Task)
+	taskDB.TaskPointersEnconding = input.TaskPointersEnconding
 
-	input.DisplayedName_Data.String = input.DisplayedName
-	input.DisplayedName_Data.Valid = true
-
-	input.Start_Data.Time = input.Start
-	input.Start_Data.Valid = true
-
-	input.End_Data.Time = input.End
-	input.End_Data.Valid = true
-
-	input.Duration_Data.Int64 = int64(input.Duration)
-	input.Duration_Data.Valid = true
-
-	input.PercentComplete_Data.Float64 = input.PercentComplete
-	input.PercentComplete_Data.Valid = true
-
-	input.Rank_Data.Int64 = int64(input.Rank)
-	input.Rank_Data.Valid = true
-
-	query = db.Model(&taskDB).Updates(input)
+	query = db.Model(&taskDB).Updates(taskDB)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -287,7 +205,7 @@ func UpdateTask(c *gin.Context) {
 
 	// an UPDATE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	// return status OK with the marshalling of the the taskDB
 	c.JSON(http.StatusOK, taskDB)
@@ -302,7 +220,7 @@ func UpdateTask(c *gin.Context) {
 // Responses:
 //    default: genericError
 func DeleteTask(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoTask.GetDB()
 
 	// Get model if exist
 	var taskDB orm.TaskDB
@@ -319,7 +237,7 @@ func DeleteTask(c *gin.Context) {
 
 	// a DELETE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
 }

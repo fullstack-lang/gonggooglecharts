@@ -9,7 +9,6 @@ import (
 	"github.com/fullstack-lang/gonggooglecharts/go/orm"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 // declaration in order to justify use of the models import
@@ -47,10 +46,11 @@ type GanttChartInput struct {
 //    default: genericError
 //        200: ganttchartDBsResponse
 func GetGanttCharts(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
-
-	var ganttcharts []orm.GanttChartDB
-	query := db.Find(&ganttcharts)
+	db := orm.BackRepo.BackRepoGanttChart.GetDB()
+	
+	// source slice
+	var ganttchartDBs []orm.GanttChartDB
+	query := db.Find(&ganttchartDBs)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -59,18 +59,23 @@ func GetGanttCharts(c *gin.Context) {
 		return
 	}
 
-	// for each ganttchart, update fields from the database nullable fields
-	for idx := range ganttcharts {
-		ganttchart := &ganttcharts[idx]
-		_ = ganttchart
-		// insertion point for updating fields
-		if ganttchart.Name_Data.Valid {
-			ganttchart.Name = ganttchart.Name_Data.String
-		}
+	// slice that will be transmitted to the front
+	ganttchartAPIs := make([]orm.GanttChartAPI, 0)
 
+	// for each ganttchart, update fields from the database nullable fields
+	for idx := range ganttchartDBs {
+		ganttchartDB := &ganttchartDBs[idx]
+		_ = ganttchartDB
+		var ganttchartAPI orm.GanttChartAPI
+
+		// insertion point for updating fields
+		ganttchartAPI.ID = ganttchartDB.ID
+		ganttchartDB.CopyBasicFieldsToGanttChart(&ganttchartAPI.GanttChart)
+		ganttchartAPI.GanttChartPointersEnconding = ganttchartDB.GanttChartPointersEnconding
+		ganttchartAPIs = append(ganttchartAPIs, ganttchartAPI)
 	}
 
-	c.JSON(http.StatusOK, ganttcharts)
+	c.JSON(http.StatusOK, ganttchartAPIs)
 }
 
 // PostGanttChart
@@ -87,7 +92,7 @@ func GetGanttCharts(c *gin.Context) {
 //     Responses:
 //       200: ganttchartDBResponse
 func PostGanttChart(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoGanttChart.GetDB()
 
 	// Validate input
 	var input orm.GanttChartAPI
@@ -103,10 +108,8 @@ func PostGanttChart(c *gin.Context) {
 
 	// Create ganttchart
 	ganttchartDB := orm.GanttChartDB{}
-	ganttchartDB.GanttChartAPI = input
-	// insertion point for nullable field set
-	ganttchartDB.Name_Data.String = input.Name
-	ganttchartDB.Name_Data.Valid = true
+	ganttchartDB.GanttChartPointersEnconding = input.GanttChartPointersEnconding
+	ganttchartDB.CopyBasicFieldsFromGanttChart(&input.GanttChart)
 
 	query := db.Create(&ganttchartDB)
 	if query.Error != nil {
@@ -119,7 +122,7 @@ func PostGanttChart(c *gin.Context) {
 
 	// a POST is equivalent to a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, ganttchartDB)
 }
@@ -134,11 +137,11 @@ func PostGanttChart(c *gin.Context) {
 //    default: genericError
 //        200: ganttchartDBResponse
 func GetGanttChart(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoGanttChart.GetDB()
 
-	// Get ganttchart in DB
-	var ganttchart orm.GanttChartDB
-	if err := db.First(&ganttchart, c.Param("id")).Error; err != nil {
+	// Get ganttchartDB in DB
+	var ganttchartDB orm.GanttChartDB
+	if err := db.First(&ganttchartDB, c.Param("id")).Error; err != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
 		returnError.Body.Message = err.Error()
@@ -146,12 +149,12 @@ func GetGanttChart(c *gin.Context) {
 		return
 	}
 
-	// insertion point for fields value set from nullable fields
-	if ganttchart.Name_Data.Valid {
-		ganttchart.Name = ganttchart.Name_Data.String
-	}
+	var ganttchartAPI orm.GanttChartAPI
+	ganttchartAPI.ID = ganttchartDB.ID
+	ganttchartAPI.GanttChartPointersEnconding = ganttchartDB.GanttChartPointersEnconding
+	ganttchartDB.CopyBasicFieldsToGanttChart(&ganttchartAPI.GanttChart)
 
-	c.JSON(http.StatusOK, ganttchart)
+	c.JSON(http.StatusOK, ganttchartAPI)
 }
 
 // UpdateGanttChart
@@ -164,7 +167,7 @@ func GetGanttChart(c *gin.Context) {
 //    default: genericError
 //        200: ganttchartDBResponse
 func UpdateGanttChart(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoGanttChart.GetDB()
 
 	// Get model if exist
 	var ganttchartDB orm.GanttChartDB
@@ -188,11 +191,10 @@ func UpdateGanttChart(c *gin.Context) {
 	}
 
 	// update
-	// insertion point for nullable field set
-	input.Name_Data.String = input.Name
-	input.Name_Data.Valid = true
+	ganttchartDB.CopyBasicFieldsFromGanttChart(&input.GanttChart)
+	ganttchartDB.GanttChartPointersEnconding = input.GanttChartPointersEnconding
 
-	query = db.Model(&ganttchartDB).Updates(input)
+	query = db.Model(&ganttchartDB).Updates(ganttchartDB)
 	if query.Error != nil {
 		var returnError GenericError
 		returnError.Body.Code = http.StatusBadRequest
@@ -203,7 +205,7 @@ func UpdateGanttChart(c *gin.Context) {
 
 	// an UPDATE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	// return status OK with the marshalling of the the ganttchartDB
 	c.JSON(http.StatusOK, ganttchartDB)
@@ -218,7 +220,7 @@ func UpdateGanttChart(c *gin.Context) {
 // Responses:
 //    default: genericError
 func DeleteGanttChart(c *gin.Context) {
-	db := c.MustGet("db").(*gorm.DB)
+	db := orm.BackRepo.BackRepoGanttChart.GetDB()
 
 	// Get model if exist
 	var ganttchartDB orm.GanttChartDB
@@ -235,7 +237,7 @@ func DeleteGanttChart(c *gin.Context) {
 
 	// a DELETE generates a back repo commit increase
 	// (this will be improved with implementation of unit of work design pattern)
-	orm.BackRepo.IncrementCommitNb()
+	orm.BackRepo.IncrementPushFromFrontNb()
 
 	c.JSON(http.StatusOK, gin.H{"data": true})
 }

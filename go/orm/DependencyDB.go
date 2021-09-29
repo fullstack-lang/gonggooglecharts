@@ -3,20 +3,26 @@ package orm
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
 // dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
-var dummy_Dependency sql.NullBool
-var __Dependency_time__dummyDeclaration time.Duration
+var dummy_Dependency_sql sql.NullBool
+var dummy_Dependency_time time.Duration
 var dummy_Dependency_sort sort.Float64Slice
 
 // DependencyAPI is the input in POST API
@@ -27,35 +33,44 @@ var dummy_Dependency_sort sort.Float64Slice
 //
 // swagger:model dependencyAPI
 type DependencyAPI struct {
+	gorm.Model
+
 	models.Dependency
 
-	// insertion for fields declaration
-	// Declation for basic field dependencyDB.Name {{BasicKind}} (to be completed)
-	Name_Data sql.NullString
+	// encoding of pointers
+	DependencyPointersEnconding
+}
 
+// DependencyPointersEnconding encodes pointers to Struct and
+// reverse pointers of slice of poitners to Struct
+type DependencyPointersEnconding struct {
+	// insertion for pointer fields encoding declaration
 	// field Task is a pointer to another Struct (optional or 0..1)
 	// This field is generated into another field to enable AS ONE association
 	TaskID sql.NullInt64
 
-	// all gong Struct has a Name field, this enables this data to object field
-	TaskName string
-
 	// Implementation of a reverse ID for field Task{}.Dependencies []*Dependency
 	Task_DependenciesDBID sql.NullInt64
-	Task_DependenciesDBID_Index sql.NullInt64
 
-	// end of insertion
+	// implementation of the index of the withing the slice
+	Task_DependenciesDBID_Index sql.NullInt64
 }
 
 // DependencyDB describes a dependency in the database
 //
-// It incorporates all fields : from the model, from the generated field for the API and the GORM ID
+// It incorporates the GORM ID, basic fields from the model (because they can be serialized),
+// the encoded version of pointers
 //
 // swagger:model dependencyDB
 type DependencyDB struct {
 	gorm.Model
 
-	DependencyAPI
+	// insertion for basic fields declaration
+	// Declation for basic field dependencyDB.Name {{BasicKind}} (to be completed)
+	Name_Data sql.NullString
+
+	// encoding of pointers
+	DependencyPointersEnconding
 }
 
 // DependencyDBs arrays dependencyDBs
@@ -66,6 +81,23 @@ type DependencyDBs []DependencyDB
 // swagger:response dependencyDBResponse
 type DependencyDBResponse struct {
 	DependencyDB
+}
+
+// DependencyWOP is a Dependency without pointers (WOP is an acronym for "Without Pointers")
+// it holds the same basic fields but pointers are encoded into uint
+type DependencyWOP struct {
+	ID int
+
+	// insertion for WOP basic fields
+
+	Name string
+	// insertion for WOP pointer fields
+}
+
+var Dependency_Fields = []string{
+	// insertion for WOP basic fields
+	"ID",
+	"Name",
 }
 
 type BackRepoDependencyStruct struct {
@@ -79,6 +111,17 @@ type BackRepoDependencyStruct struct {
 	Map_DependencyDBID_DependencyPtr *map[uint]*models.Dependency
 
 	db *gorm.DB
+}
+
+func (backRepoDependency *BackRepoDependencyStruct) GetDB() *gorm.DB {
+	return backRepoDependency.db
+}
+
+// GetDependencyDBFromDependencyPtr is a handy function to access the back repo instance from the stage instance
+func (backRepoDependency *BackRepoDependencyStruct) GetDependencyDBFromDependencyPtr(dependency *models.Dependency) (dependencyDB *DependencyDB) {
+	id := (*backRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]
+	dependencyDB = (*backRepoDependency.Map_DependencyDBID_DependencyDB)[id]
+	return
 }
 
 // BackRepoDependency.Init set up the BackRepo of the Dependency
@@ -162,7 +205,7 @@ func (backRepoDependency *BackRepoDependencyStruct) CommitPhaseOneInstance(depen
 
 	// initiate dependency
 	var dependencyDB DependencyDB
-	dependencyDB.Dependency = *dependency
+	dependencyDB.CopyBasicFieldsFromDependency(dependency)
 
 	query := backRepoDependency.db.Create(&dependencyDB)
 	if query.Error != nil {
@@ -195,22 +238,17 @@ func (backRepoDependency *BackRepoDependencyStruct) CommitPhaseTwoInstance(backR
 	// fetch matching dependencyDB
 	if dependencyDB, ok := (*backRepoDependency.Map_DependencyDBID_DependencyDB)[idx]; ok {
 
-		{
-			{
-				// insertion point for fields commit
-				dependencyDB.Name_Data.String = dependency.Name
-				dependencyDB.Name_Data.Valid = true
+		dependencyDB.CopyBasicFieldsFromDependency(dependency)
 
-				// commit pointer value dependency.Task translates to updating the dependency.TaskID
-				dependencyDB.TaskID.Valid = true // allow for a 0 value (nil association)
-				if dependency.Task != nil {
-					if TaskId, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[dependency.Task]; ok {
-						dependencyDB.TaskID.Int64 = int64(TaskId)
-					}
-				}
-
+		// insertion point for translating pointers encodings into actual pointers
+		// commit pointer value dependency.Task translates to updating the dependency.TaskID
+		dependencyDB.TaskID.Valid = true // allow for a 0 value (nil association)
+		if dependency.Task != nil {
+			if TaskId, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[dependency.Task]; ok {
+				dependencyDB.TaskID.Int64 = int64(TaskId)
 			}
 		}
+
 		query := backRepoDependency.db.Save(&dependencyDB)
 		if query.Error != nil {
 			return query.Error
@@ -227,9 +265,8 @@ func (backRepoDependency *BackRepoDependencyStruct) CommitPhaseTwoInstance(backR
 
 // BackRepoDependency.CheckoutPhaseOne Checkouts all BackRepo instances to the Stage
 //
-// Phase One is the creation of instance in the stage
-//
-// NOTE: the is supposed to have been reset before
+// Phase One will result in having instances on the stage aligned with the back repo
+// pointers are not initialized yet (this is for pahse two)
 //
 func (backRepoDependency *BackRepoDependencyStruct) CheckoutPhaseOne() (Error error) {
 
@@ -239,9 +276,34 @@ func (backRepoDependency *BackRepoDependencyStruct) CheckoutPhaseOne() (Error er
 		return query.Error
 	}
 
+	// list of instances to be removed
+	// start from the initial map on the stage and remove instances that have been checked out
+	dependencyInstancesToBeRemovedFromTheStage := make(map[*models.Dependency]struct{})
+	for key, value := range models.Stage.Dependencys {
+		dependencyInstancesToBeRemovedFromTheStage[key] = value
+	}
+
 	// copy orm objects to the the map
 	for _, dependencyDB := range dependencyDBArray {
 		backRepoDependency.CheckoutPhaseOneInstance(&dependencyDB)
+
+		// do not remove this instance from the stage, therefore
+		// remove instance from the list of instances to be be removed from the stage
+		dependency, ok := (*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID]
+		if ok {
+			delete(dependencyInstancesToBeRemovedFromTheStage, dependency)
+		}
+	}
+
+	// remove from stage and back repo's 3 maps all dependencys that are not in the checkout
+	for dependency := range dependencyInstancesToBeRemovedFromTheStage {
+		dependency.Unstage()
+
+		// remove instance from the back repo 3 maps
+		dependencyID := (*backRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency]
+		delete((*backRepoDependency.Map_DependencyPtr_DependencyDBID), dependency)
+		delete((*backRepoDependency.Map_DependencyDBID_DependencyDB), dependencyID)
+		delete((*backRepoDependency.Map_DependencyDBID_DependencyPtr), dependencyID)
 	}
 
 	return
@@ -251,18 +313,24 @@ func (backRepoDependency *BackRepoDependencyStruct) CheckoutPhaseOne() (Error er
 // models version of the dependencyDB
 func (backRepoDependency *BackRepoDependencyStruct) CheckoutPhaseOneInstance(dependencyDB *DependencyDB) (Error error) {
 
-	// if absent, create entries in the backRepoDependency maps.
-	dependencyWithNewFieldValues := dependencyDB.Dependency
-	if _, ok := (*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID]; !ok {
+	dependency, ok := (*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID]
+	if !ok {
+		dependency = new(models.Dependency)
 
-		(*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID] = &dependencyWithNewFieldValues
-		(*backRepoDependency.Map_DependencyPtr_DependencyDBID)[&dependencyWithNewFieldValues] = dependencyDB.ID
+		(*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID] = dependency
+		(*backRepoDependency.Map_DependencyPtr_DependencyDBID)[dependency] = dependencyDB.ID
 
 		// append model store with the new element
-		dependencyWithNewFieldValues.Stage()
+		dependency.Name = dependencyDB.Name_Data.String
+		dependency.Stage()
 	}
-	dependencyDBWithNewFieldValues := *dependencyDB
-	(*backRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB.ID] = &dependencyDBWithNewFieldValues
+	dependencyDB.CopyBasicFieldsToDependency(dependency)
+
+	// preserve pointer to dependencyDB. Otherwise, pointer will is recycled and the map of pointers
+	// Map_DependencyDBID_DependencyDB)[dependencyDB hold variable pointers
+	dependencyDB_Data := *dependencyDB
+	preservedPtrToDependency := &dependencyDB_Data
+	(*backRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB.ID] = preservedPtrToDependency
 
 	return
 }
@@ -284,18 +352,11 @@ func (backRepoDependency *BackRepoDependencyStruct) CheckoutPhaseTwoInstance(bac
 
 	dependency := (*backRepoDependency.Map_DependencyDBID_DependencyPtr)[dependencyDB.ID]
 	_ = dependency // sometimes, there is no code generated. This lines voids the "unused variable" compilation error
-	{
-		{
-			// insertion point for checkout, i.e. update of fields of stage instance from fields of back repo instances
-			//
-			dependency.Name = dependencyDB.Name_Data.String
 
-			// Task field
-			if dependencyDB.TaskID.Int64 != 0 {
-				dependency.Task = (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[uint(dependencyDB.TaskID.Int64)]
-			}
-
-		}
+	// insertion point for checkout of pointer encoding
+	// Task field
+	if dependencyDB.TaskID.Int64 != 0 {
+		dependency.Task = (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[uint(dependencyDB.TaskID.Int64)]
 	}
 	return
 }
@@ -325,3 +386,166 @@ func (backRepo *BackRepoStruct) CheckoutDependency(dependency *models.Dependency
 		}
 	}
 }
+
+// CopyBasicFieldsFromDependency
+func (dependencyDB *DependencyDB) CopyBasicFieldsFromDependency(dependency *models.Dependency) {
+	// insertion point for fields commit
+	dependencyDB.Name_Data.String = dependency.Name
+	dependencyDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsFromDependencyWOP
+func (dependencyDB *DependencyDB) CopyBasicFieldsFromDependencyWOP(dependency *DependencyWOP) {
+	// insertion point for fields commit
+	dependencyDB.Name_Data.String = dependency.Name
+	dependencyDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsToDependency
+func (dependencyDB *DependencyDB) CopyBasicFieldsToDependency(dependency *models.Dependency) {
+	// insertion point for checkout of basic fields (back repo to stage)
+	dependency.Name = dependencyDB.Name_Data.String
+}
+
+// CopyBasicFieldsToDependencyWOP
+func (dependencyDB *DependencyDB) CopyBasicFieldsToDependencyWOP(dependency *DependencyWOP) {
+	dependency.ID = int(dependencyDB.ID)
+	// insertion point for checkout of basic fields (back repo to stage)
+	dependency.Name = dependencyDB.Name_Data.String
+}
+
+// Backup generates a json file from a slice of all DependencyDB instances in the backrepo
+func (backRepoDependency *BackRepoDependencyStruct) Backup(dirPath string) {
+
+	filename := filepath.Join(dirPath, "DependencyDB.json")
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*DependencyDB, 0)
+	for _, dependencyDB := range *backRepoDependency.Map_DependencyDBID_DependencyDB {
+		forBackup = append(forBackup, dependencyDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	file, err := json.MarshalIndent(forBackup, "", " ")
+
+	if err != nil {
+		log.Panic("Cannot json Dependency ", filename, " ", err.Error())
+	}
+
+	err = ioutil.WriteFile(filename, file, 0644)
+	if err != nil {
+		log.Panic("Cannot write the json Dependency file", err.Error())
+	}
+}
+
+// Backup generates a json file from a slice of all DependencyDB instances in the backrepo
+func (backRepoDependency *BackRepoDependencyStruct) BackupXL(file *xlsx.File) {
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*DependencyDB, 0)
+	for _, dependencyDB := range *backRepoDependency.Map_DependencyDBID_DependencyDB {
+		forBackup = append(forBackup, dependencyDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	sh, err := file.AddSheet("Dependency")
+	if err != nil {
+		log.Panic("Cannot add XL file", err.Error())
+	}
+	_ = sh
+
+	row := sh.AddRow()
+	row.WriteSlice(&Dependency_Fields, -1)
+	for _, dependencyDB := range forBackup {
+
+		var dependencyWOP DependencyWOP
+		dependencyDB.CopyBasicFieldsToDependencyWOP(&dependencyWOP)
+
+		row := sh.AddRow()
+		row.WriteStruct(&dependencyWOP, -1)
+	}
+}
+
+// RestorePhaseOne read the file "DependencyDB.json" in dirPath that stores an array
+// of DependencyDB and stores it in the database
+// the map BackRepoDependencyid_atBckpTime_newID is updated accordingly
+func (backRepoDependency *BackRepoDependencyStruct) RestorePhaseOne(dirPath string) {
+
+	// resets the map
+	BackRepoDependencyid_atBckpTime_newID = make(map[uint]uint)
+
+	filename := filepath.Join(dirPath, "DependencyDB.json")
+	jsonFile, err := os.Open(filename)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		log.Panic("Cannot restore/open the json Dependency file", filename, " ", err.Error())
+	}
+
+	// read our opened jsonFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var forRestore []*DependencyDB
+
+	err = json.Unmarshal(byteValue, &forRestore)
+
+	// fill up Map_DependencyDBID_DependencyDB
+	for _, dependencyDB := range forRestore {
+
+		dependencyDB_ID_atBackupTime := dependencyDB.ID
+		dependencyDB.ID = 0
+		query := backRepoDependency.db.Create(dependencyDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+		(*backRepoDependency.Map_DependencyDBID_DependencyDB)[dependencyDB.ID] = dependencyDB
+		BackRepoDependencyid_atBckpTime_newID[dependencyDB_ID_atBackupTime] = dependencyDB.ID
+	}
+
+	if err != nil {
+		log.Panic("Cannot restore/unmarshall json Dependency file", err.Error())
+	}
+}
+
+// RestorePhaseTwo uses all map BackRepo<Dependency>id_atBckpTime_newID
+// to compute new index
+func (backRepoDependency *BackRepoDependencyStruct) RestorePhaseTwo() {
+
+	for _, dependencyDB := range *backRepoDependency.Map_DependencyDBID_DependencyDB {
+
+		// next line of code is to avert unused variable compilation error
+		_ = dependencyDB
+
+		// insertion point for reindexing pointers encoding
+		// reindexing Task field
+		if dependencyDB.TaskID.Int64 != 0 {
+			dependencyDB.TaskID.Int64 = int64(BackRepoTaskid_atBckpTime_newID[uint(dependencyDB.TaskID.Int64)])
+		}
+
+		// This reindex dependency.Dependencies
+		if dependencyDB.Task_DependenciesDBID.Int64 != 0 {
+			dependencyDB.Task_DependenciesDBID.Int64 =
+				int64(BackRepoTaskid_atBckpTime_newID[uint(dependencyDB.Task_DependenciesDBID.Int64)])
+		}
+
+		// update databse with new index encoding
+		query := backRepoDependency.db.Model(dependencyDB).Updates(*dependencyDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+	}
+
+}
+
+// this field is used during the restauration process.
+// it stores the ID at the backup time and is used for renumbering
+var BackRepoDependencyid_atBckpTime_newID map[uint]uint

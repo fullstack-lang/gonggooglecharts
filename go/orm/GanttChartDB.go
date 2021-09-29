@@ -3,20 +3,26 @@ package orm
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
+
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/fullstack-lang/gonggooglecharts/go/models"
 )
 
 // dummy variable to have the import declaration wihthout compile failure (even if no code needing this import is generated)
-var dummy_GanttChart sql.NullBool
-var __GanttChart_time__dummyDeclaration time.Duration
+var dummy_GanttChart_sql sql.NullBool
+var dummy_GanttChart_time time.Duration
 var dummy_GanttChart_sort sort.Float64Slice
 
 // GanttChartAPI is the input in POST API
@@ -27,24 +33,35 @@ var dummy_GanttChart_sort sort.Float64Slice
 //
 // swagger:model ganttchartAPI
 type GanttChartAPI struct {
+	gorm.Model
+
 	models.GanttChart
 
-	// insertion for fields declaration
-	// Declation for basic field ganttchartDB.Name {{BasicKind}} (to be completed)
-	Name_Data sql.NullString
+	// encoding of pointers
+	GanttChartPointersEnconding
+}
 
-	// end of insertion
+// GanttChartPointersEnconding encodes pointers to Struct and
+// reverse pointers of slice of poitners to Struct
+type GanttChartPointersEnconding struct {
+	// insertion for pointer fields encoding declaration
 }
 
 // GanttChartDB describes a ganttchart in the database
 //
-// It incorporates all fields : from the model, from the generated field for the API and the GORM ID
+// It incorporates the GORM ID, basic fields from the model (because they can be serialized),
+// the encoded version of pointers
 //
 // swagger:model ganttchartDB
 type GanttChartDB struct {
 	gorm.Model
 
-	GanttChartAPI
+	// insertion for basic fields declaration
+	// Declation for basic field ganttchartDB.Name {{BasicKind}} (to be completed)
+	Name_Data sql.NullString
+
+	// encoding of pointers
+	GanttChartPointersEnconding
 }
 
 // GanttChartDBs arrays ganttchartDBs
@@ -55,6 +72,23 @@ type GanttChartDBs []GanttChartDB
 // swagger:response ganttchartDBResponse
 type GanttChartDBResponse struct {
 	GanttChartDB
+}
+
+// GanttChartWOP is a GanttChart without pointers (WOP is an acronym for "Without Pointers")
+// it holds the same basic fields but pointers are encoded into uint
+type GanttChartWOP struct {
+	ID int
+
+	// insertion for WOP basic fields
+
+	Name string
+	// insertion for WOP pointer fields
+}
+
+var GanttChart_Fields = []string{
+	// insertion for WOP basic fields
+	"ID",
+	"Name",
 }
 
 type BackRepoGanttChartStruct struct {
@@ -68,6 +102,17 @@ type BackRepoGanttChartStruct struct {
 	Map_GanttChartDBID_GanttChartPtr *map[uint]*models.GanttChart
 
 	db *gorm.DB
+}
+
+func (backRepoGanttChart *BackRepoGanttChartStruct) GetDB() *gorm.DB {
+	return backRepoGanttChart.db
+}
+
+// GetGanttChartDBFromGanttChartPtr is a handy function to access the back repo instance from the stage instance
+func (backRepoGanttChart *BackRepoGanttChartStruct) GetGanttChartDBFromGanttChartPtr(ganttchart *models.GanttChart) (ganttchartDB *GanttChartDB) {
+	id := (*backRepoGanttChart.Map_GanttChartPtr_GanttChartDBID)[ganttchart]
+	ganttchartDB = (*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB)[id]
+	return
 }
 
 // BackRepoGanttChart.Init set up the BackRepo of the GanttChart
@@ -151,7 +196,7 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseOneInstance(gantt
 
 	// initiate ganttchart
 	var ganttchartDB GanttChartDB
-	ganttchartDB.GanttChart = *ganttchart
+	ganttchartDB.CopyBasicFieldsFromGanttChart(ganttchart)
 
 	query := backRepoGanttChart.db.Create(&ganttchartDB)
 	if query.Error != nil {
@@ -184,31 +229,28 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseTwoInstance(backR
 	// fetch matching ganttchartDB
 	if ganttchartDB, ok := (*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB)[idx]; ok {
 
-		{
-			{
-				// insertion point for fields commit
-				ganttchartDB.Name_Data.String = ganttchart.Name
-				ganttchartDB.Name_Data.Valid = true
+		ganttchartDB.CopyBasicFieldsFromGanttChart(ganttchart)
 
-				// commit a slice of pointer translates to update reverse pointer to Task, i.e.
-				index_Tasks := 0
-				for _, task := range ganttchart.Tasks {
-					if taskDBID, ok := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[task]; ok {
-						if taskDB, ok := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDBID]; ok {
-							taskDB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
-							taskDB.GanttChart_TasksDBID.Valid = true
-							taskDB.GanttChart_TasksDBID_Index.Int64 = int64(index_Tasks)
-							index_Tasks = index_Tasks + 1
-							taskDB.GanttChart_TasksDBID_Index.Valid = true
-							if q := backRepoGanttChart.db.Save(&taskDB); q.Error != nil {
-								return q.Error
-							}
-						}
-					}
-				}
+		// insertion point for translating pointers encodings into actual pointers
+		// This loop encodes the slice of pointers ganttchart.Tasks into the back repo.
+		// Each back repo instance at the end of the association encode the ID of the association start
+		// into a dedicated field for coding the association. The back repo instance is then saved to the db
+		for idx, taskAssocEnd := range ganttchart.Tasks {
 
+			// get the back repo instance at the association end
+			taskAssocEnd_DB :=
+				backRepo.BackRepoTask.GetTaskDBFromTaskPtr(taskAssocEnd)
+
+			// encode reverse pointer in the association end back repo instance
+			taskAssocEnd_DB.GanttChart_TasksDBID.Int64 = int64(ganttchartDB.ID)
+			taskAssocEnd_DB.GanttChart_TasksDBID.Valid = true
+			taskAssocEnd_DB.GanttChart_TasksDBID_Index.Int64 = int64(idx)
+			taskAssocEnd_DB.GanttChart_TasksDBID_Index.Valid = true
+			if q := backRepoGanttChart.db.Save(taskAssocEnd_DB); q.Error != nil {
+				return q.Error
 			}
 		}
+
 		query := backRepoGanttChart.db.Save(&ganttchartDB)
 		if query.Error != nil {
 			return query.Error
@@ -225,9 +267,8 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CommitPhaseTwoInstance(backR
 
 // BackRepoGanttChart.CheckoutPhaseOne Checkouts all BackRepo instances to the Stage
 //
-// Phase One is the creation of instance in the stage
-//
-// NOTE: the is supposed to have been reset before
+// Phase One will result in having instances on the stage aligned with the back repo
+// pointers are not initialized yet (this is for pahse two)
 //
 func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseOne() (Error error) {
 
@@ -237,9 +278,34 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseOne() (Error er
 		return query.Error
 	}
 
+	// list of instances to be removed
+	// start from the initial map on the stage and remove instances that have been checked out
+	ganttchartInstancesToBeRemovedFromTheStage := make(map[*models.GanttChart]struct{})
+	for key, value := range models.Stage.GanttCharts {
+		ganttchartInstancesToBeRemovedFromTheStage[key] = value
+	}
+
 	// copy orm objects to the the map
 	for _, ganttchartDB := range ganttchartDBArray {
 		backRepoGanttChart.CheckoutPhaseOneInstance(&ganttchartDB)
+
+		// do not remove this instance from the stage, therefore
+		// remove instance from the list of instances to be be removed from the stage
+		ganttchart, ok := (*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID]
+		if ok {
+			delete(ganttchartInstancesToBeRemovedFromTheStage, ganttchart)
+		}
+	}
+
+	// remove from stage and back repo's 3 maps all ganttcharts that are not in the checkout
+	for ganttchart := range ganttchartInstancesToBeRemovedFromTheStage {
+		ganttchart.Unstage()
+
+		// remove instance from the back repo 3 maps
+		ganttchartID := (*backRepoGanttChart.Map_GanttChartPtr_GanttChartDBID)[ganttchart]
+		delete((*backRepoGanttChart.Map_GanttChartPtr_GanttChartDBID), ganttchart)
+		delete((*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB), ganttchartID)
+		delete((*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr), ganttchartID)
 	}
 
 	return
@@ -249,18 +315,24 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseOne() (Error er
 // models version of the ganttchartDB
 func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseOneInstance(ganttchartDB *GanttChartDB) (Error error) {
 
-	// if absent, create entries in the backRepoGanttChart maps.
-	ganttchartWithNewFieldValues := ganttchartDB.GanttChart
-	if _, ok := (*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID]; !ok {
+	ganttchart, ok := (*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID]
+	if !ok {
+		ganttchart = new(models.GanttChart)
 
-		(*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID] = &ganttchartWithNewFieldValues
-		(*backRepoGanttChart.Map_GanttChartPtr_GanttChartDBID)[&ganttchartWithNewFieldValues] = ganttchartDB.ID
+		(*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID] = ganttchart
+		(*backRepoGanttChart.Map_GanttChartPtr_GanttChartDBID)[ganttchart] = ganttchartDB.ID
 
 		// append model store with the new element
-		ganttchartWithNewFieldValues.Stage()
+		ganttchart.Name = ganttchartDB.Name_Data.String
+		ganttchart.Stage()
 	}
-	ganttchartDBWithNewFieldValues := *ganttchartDB
-	(*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB)[ganttchartDB.ID] = &ganttchartDBWithNewFieldValues
+	ganttchartDB.CopyBasicFieldsToGanttChart(ganttchart)
+
+	// preserve pointer to ganttchartDB. Otherwise, pointer will is recycled and the map of pointers
+	// Map_GanttChartDBID_GanttChartDB)[ganttchartDB hold variable pointers
+	ganttchartDB_Data := *ganttchartDB
+	preservedPtrToGanttChart := &ganttchartDB_Data
+	(*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB)[ganttchartDB.ID] = preservedPtrToGanttChart
 
 	return
 }
@@ -282,35 +354,35 @@ func (backRepoGanttChart *BackRepoGanttChartStruct) CheckoutPhaseTwoInstance(bac
 
 	ganttchart := (*backRepoGanttChart.Map_GanttChartDBID_GanttChartPtr)[ganttchartDB.ID]
 	_ = ganttchart // sometimes, there is no code generated. This lines voids the "unused variable" compilation error
-	{
-		{
-			// insertion point for checkout, i.e. update of fields of stage instance from fields of back repo instances
-			//
-			ganttchart.Name = ganttchartDB.Name_Data.String
 
-			// parse all TaskDB and redeem the array of poiners to GanttChart
-			// first reset the slice
-			ganttchart.Tasks = ganttchart.Tasks[:0]
-			for _, TaskDB := range *backRepo.BackRepoTask.Map_TaskDBID_TaskDB {
-				if TaskDB.GanttChart_TasksDBID.Int64 == int64(ganttchartDB.ID) {
-					Task := (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[TaskDB.ID]
-					ganttchart.Tasks = append(ganttchart.Tasks, Task)
-				}
-			}
-			
-			// sort the array according to the order
-			sort.Slice(ganttchart.Tasks, func(i, j int) bool {
-				taskDB_i_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[i]]
-				taskDB_j_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[j]]
-
-				taskDB_i := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_i_ID]
-				taskDB_j := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_j_ID]
-
-				return taskDB_i.GanttChart_TasksDBID_Index.Int64 < taskDB_j.GanttChart_TasksDBID_Index.Int64
-			})
-
+	// insertion point for checkout of pointer encoding
+	// This loop redeem ganttchart.Tasks in the stage from the encode in the back repo
+	// It parses all TaskDB in the back repo and if the reverse pointer encoding matches the back repo ID
+	// it appends the stage instance
+	// 1. reset the slice
+	ganttchart.Tasks = ganttchart.Tasks[:0]
+	// 2. loop all instances in the type in the association end
+	for _, taskDB_AssocEnd := range *backRepo.BackRepoTask.Map_TaskDBID_TaskDB {
+		// 3. Does the ID encoding at the end and the ID at the start matches ?
+		if taskDB_AssocEnd.GanttChart_TasksDBID.Int64 == int64(ganttchartDB.ID) {
+			// 4. fetch the associated instance in the stage
+			task_AssocEnd := (*backRepo.BackRepoTask.Map_TaskDBID_TaskPtr)[taskDB_AssocEnd.ID]
+			// 5. append it the association slice
+			ganttchart.Tasks = append(ganttchart.Tasks, task_AssocEnd)
 		}
 	}
+
+	// sort the array according to the order
+	sort.Slice(ganttchart.Tasks, func(i, j int) bool {
+		taskDB_i_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[i]]
+		taskDB_j_ID := (*backRepo.BackRepoTask.Map_TaskPtr_TaskDBID)[ganttchart.Tasks[j]]
+
+		taskDB_i := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_i_ID]
+		taskDB_j := (*backRepo.BackRepoTask.Map_TaskDBID_TaskDB)[taskDB_j_ID]
+
+		return taskDB_i.GanttChart_TasksDBID_Index.Int64 < taskDB_j.GanttChart_TasksDBID_Index.Int64
+	})
+
 	return
 }
 
@@ -339,3 +411,155 @@ func (backRepo *BackRepoStruct) CheckoutGanttChart(ganttchart *models.GanttChart
 		}
 	}
 }
+
+// CopyBasicFieldsFromGanttChart
+func (ganttchartDB *GanttChartDB) CopyBasicFieldsFromGanttChart(ganttchart *models.GanttChart) {
+	// insertion point for fields commit
+	ganttchartDB.Name_Data.String = ganttchart.Name
+	ganttchartDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsFromGanttChartWOP
+func (ganttchartDB *GanttChartDB) CopyBasicFieldsFromGanttChartWOP(ganttchart *GanttChartWOP) {
+	// insertion point for fields commit
+	ganttchartDB.Name_Data.String = ganttchart.Name
+	ganttchartDB.Name_Data.Valid = true
+
+}
+
+// CopyBasicFieldsToGanttChart
+func (ganttchartDB *GanttChartDB) CopyBasicFieldsToGanttChart(ganttchart *models.GanttChart) {
+	// insertion point for checkout of basic fields (back repo to stage)
+	ganttchart.Name = ganttchartDB.Name_Data.String
+}
+
+// CopyBasicFieldsToGanttChartWOP
+func (ganttchartDB *GanttChartDB) CopyBasicFieldsToGanttChartWOP(ganttchart *GanttChartWOP) {
+	ganttchart.ID = int(ganttchartDB.ID)
+	// insertion point for checkout of basic fields (back repo to stage)
+	ganttchart.Name = ganttchartDB.Name_Data.String
+}
+
+// Backup generates a json file from a slice of all GanttChartDB instances in the backrepo
+func (backRepoGanttChart *BackRepoGanttChartStruct) Backup(dirPath string) {
+
+	filename := filepath.Join(dirPath, "GanttChartDB.json")
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*GanttChartDB, 0)
+	for _, ganttchartDB := range *backRepoGanttChart.Map_GanttChartDBID_GanttChartDB {
+		forBackup = append(forBackup, ganttchartDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	file, err := json.MarshalIndent(forBackup, "", " ")
+
+	if err != nil {
+		log.Panic("Cannot json GanttChart ", filename, " ", err.Error())
+	}
+
+	err = ioutil.WriteFile(filename, file, 0644)
+	if err != nil {
+		log.Panic("Cannot write the json GanttChart file", err.Error())
+	}
+}
+
+// Backup generates a json file from a slice of all GanttChartDB instances in the backrepo
+func (backRepoGanttChart *BackRepoGanttChartStruct) BackupXL(file *xlsx.File) {
+
+	// organize the map into an array with increasing IDs, in order to have repoductible
+	// backup file
+	forBackup := make([]*GanttChartDB, 0)
+	for _, ganttchartDB := range *backRepoGanttChart.Map_GanttChartDBID_GanttChartDB {
+		forBackup = append(forBackup, ganttchartDB)
+	}
+
+	sort.Slice(forBackup[:], func(i, j int) bool {
+		return forBackup[i].ID < forBackup[j].ID
+	})
+
+	sh, err := file.AddSheet("GanttChart")
+	if err != nil {
+		log.Panic("Cannot add XL file", err.Error())
+	}
+	_ = sh
+
+	row := sh.AddRow()
+	row.WriteSlice(&GanttChart_Fields, -1)
+	for _, ganttchartDB := range forBackup {
+
+		var ganttchartWOP GanttChartWOP
+		ganttchartDB.CopyBasicFieldsToGanttChartWOP(&ganttchartWOP)
+
+		row := sh.AddRow()
+		row.WriteStruct(&ganttchartWOP, -1)
+	}
+}
+
+// RestorePhaseOne read the file "GanttChartDB.json" in dirPath that stores an array
+// of GanttChartDB and stores it in the database
+// the map BackRepoGanttChartid_atBckpTime_newID is updated accordingly
+func (backRepoGanttChart *BackRepoGanttChartStruct) RestorePhaseOne(dirPath string) {
+
+	// resets the map
+	BackRepoGanttChartid_atBckpTime_newID = make(map[uint]uint)
+
+	filename := filepath.Join(dirPath, "GanttChartDB.json")
+	jsonFile, err := os.Open(filename)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		log.Panic("Cannot restore/open the json GanttChart file", filename, " ", err.Error())
+	}
+
+	// read our opened jsonFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var forRestore []*GanttChartDB
+
+	err = json.Unmarshal(byteValue, &forRestore)
+
+	// fill up Map_GanttChartDBID_GanttChartDB
+	for _, ganttchartDB := range forRestore {
+
+		ganttchartDB_ID_atBackupTime := ganttchartDB.ID
+		ganttchartDB.ID = 0
+		query := backRepoGanttChart.db.Create(ganttchartDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+		(*backRepoGanttChart.Map_GanttChartDBID_GanttChartDB)[ganttchartDB.ID] = ganttchartDB
+		BackRepoGanttChartid_atBckpTime_newID[ganttchartDB_ID_atBackupTime] = ganttchartDB.ID
+	}
+
+	if err != nil {
+		log.Panic("Cannot restore/unmarshall json GanttChart file", err.Error())
+	}
+}
+
+// RestorePhaseTwo uses all map BackRepo<GanttChart>id_atBckpTime_newID
+// to compute new index
+func (backRepoGanttChart *BackRepoGanttChartStruct) RestorePhaseTwo() {
+
+	for _, ganttchartDB := range *backRepoGanttChart.Map_GanttChartDBID_GanttChartDB {
+
+		// next line of code is to avert unused variable compilation error
+		_ = ganttchartDB
+
+		// insertion point for reindexing pointers encoding
+		// update databse with new index encoding
+		query := backRepoGanttChart.db.Model(ganttchartDB).Updates(*ganttchartDB)
+		if query.Error != nil {
+			log.Panic(query.Error)
+		}
+	}
+
+}
+
+// this field is used during the restauration process.
+// it stores the ID at the backup time and is used for renumbering
+var BackRepoGanttChartid_atBckpTime_newID map[uint]uint
